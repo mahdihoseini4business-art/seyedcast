@@ -58,7 +58,7 @@ class SeyedCast_Post_Type {
             'show_in_menu'       => true,
             'show_in_rest'       => true,
             'query_var'          => true,
-            'rewrite'            => array('slug' => 'episode', 'with_front' => false),
+            'rewrite'            => array('slug' => 'radio', 'with_front' => false),
             'capability_type'    => 'post',
             'has_archive'        => true,
             'hierarchical'       => false,
