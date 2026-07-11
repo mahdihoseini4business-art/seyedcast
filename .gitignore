@@ -1,0 +1,33 @@
+# وردپرس
+wp-config.php
+wp-content/uploads/
+wp-content/plugins/*/vendor/
+wp-content/advanced-cache.php
+wp-content/wp-cache-config.php
+wp-content/cache/
+
+# سیستم عامل
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ایده‌ها
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# لاگ
+*.log
+npm-debug.log*
+
+# وابستگی‌ها
+node_modules/
+vendor/
+
+# فایل‌های موقت
+*.tmp
+*.temp
+.mimocode/
