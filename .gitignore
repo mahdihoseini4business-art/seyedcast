@@ -11,6 +11,7 @@ wp-content/cache/
 Thumbs.db
 *.swp
 *.swo
+*.zip
 *~
 
 # ایده‌ها

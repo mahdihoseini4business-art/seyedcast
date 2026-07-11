@@ -62,7 +62,7 @@ class SeyedCast_Post_Type {
             'capability_type'    => 'post',
             'has_archive'        => true,
             'hierarchical'       => false,
-            'menu_position'      => 6,
+            'menu_position'      => 26,
             'menu_icon'          => 'dashicons-microphone',
             'supports'           => array('title', 'editor', 'thumbnail', 'excerpt', 'custom-fields', 'revisions'),
         );
