@@ -43,16 +43,23 @@ class Seyedcast_Assets {
 		$context = self::is_seyedcast_context();
 
 		wp_register_style(
+			'seyedcast-vazirmatn',
+			'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap',
+			array(),
+			null
+		);
+
+		wp_register_style(
 			'seyedcast-themes',
 			SEYEDCAST_URL . 'public/css/themes.css',
-			array(),
+			array( 'seyedcast-vazirmatn' ),
 			SEYEDCAST_VERSION
 		);
 
 		wp_register_style(
 			'seyedcast-player',
 			SEYEDCAST_URL . 'public/css/player.css',
-			array( 'seyedcast-themes' ),
+			array( 'seyedcast-vazirmatn' ),
 			SEYEDCAST_VERSION
 		);
 
@@ -157,12 +164,26 @@ class Seyedcast_Assets {
 					<div class="seyedcast-sticky-player__show"></div>
 				</div>
 				<div class="seyedcast-sticky-player__controls">
-					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-back" aria-label="<?php esc_attr_e( '۱۵ ثانیه عقب', 'seyedcast' ); ?>">−۱۵</button>
-					<button type="button" class="seyedcast-btn seyedcast-btn--play" data-action="toggle" aria-label="<?php esc_attr_e( 'پخش / توقف', 'seyedcast' ); ?>">
-						<span class="seyedcast-icon-play"></span>
-						<span class="seyedcast-icon-pause" hidden></span>
+					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-back" aria-label="<?php esc_attr_e( '۱۵ ثانیه عقب', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon seyedcast-icon--back" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M11.5 6.2L5.8 12l5.7 5.8V14c4.4 0 7.5 1.4 9.7 4.4-.8-4.6-3.7-9.2-9.7-10.2V6.2zm-8.2.6v10.4H1.5V6.8h1.8z"/></svg>
+							<em>15</em>
+						</span>
 					</button>
-					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-forward" aria-label="<?php esc_attr_e( '۳۰ ثانیه جلو', 'seyedcast' ); ?>">+۳۰</button>
+					<button type="button" class="seyedcast-btn seyedcast-btn--play" data-action="toggle" aria-label="<?php esc_attr_e( 'پخش / توقف', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon-play" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8.2 5.5c-.5-.3-1.2 0-1.2.6v12c0 .6.7.9 1.2.6l10.2-6c.5-.3.5-1 0-1.3l-10.2-5.9z"/></svg>
+						</span>
+						<span class="seyedcast-icon-pause" hidden aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg>
+						</span>
+					</button>
+					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-forward" aria-label="<?php esc_attr_e( '۳۰ ثانیه جلو', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon seyedcast-icon--fwd" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12.5 6.2l5.7 5.8-5.7 5.8V14c-4.4 0-7.5 1.4-9.7 4.4.8-4.6 3.7-9.2 9.7-10.2V6.2zm8.2.6v10.4h1.8V6.8h-1.8z"/></svg>
+							<em>30</em>
+						</span>
+					</button>
 				</div>
 				<div class="seyedcast-sticky-player__progress">
 					<input type="range" class="seyedcast-range" data-action="seek" min="0" max="100" value="0" step="0.1" aria-label="<?php esc_attr_e( 'پیشرفت', 'seyedcast' ); ?>" />
@@ -178,16 +199,30 @@ class Seyedcast_Assets {
 					<option value="1.5">۱.۵×</option>
 					<option value="2">۲×</option>
 				</select>
-				<button type="button" class="seyedcast-btn seyedcast-btn--icon seyedcast-sticky-player__close--desktop" data-action="close" aria-label="<?php esc_attr_e( 'بستن پلیر', 'seyedcast' ); ?>">×</button>
+				<button type="button" class="seyedcast-btn seyedcast-btn--icon seyedcast-sticky-player__close--desktop" data-action="close" aria-label="<?php esc_attr_e( 'بستن پلیر', 'seyedcast' ); ?>">
+					<span class="seyedcast-icon seyedcast-icon--close" aria-hidden="true">
+						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+					</span>
+				</button>
 
 				<div class="seyedcast-sticky-player__tools">
-					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-back" aria-label="<?php esc_attr_e( '۱۵ ثانیه عقب', 'seyedcast' ); ?>">−۱۵</button>
+					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-back" aria-label="<?php esc_attr_e( '۱۵ ثانیه عقب', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon seyedcast-icon--back" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M11.5 6.2L5.8 12l5.7 5.8V14c4.4 0 7.5 1.4 9.7 4.4-.8-4.6-3.7-9.2-9.7-10.2V6.2zm-8.2.6v10.4H1.5V6.8h1.8z"/></svg>
+							<em>15</em>
+						</span>
+					</button>
 					<div class="seyedcast-sticky-player__tools-time">
 						<span data-role="current-mobile">0:00</span>
 						<span>/</span>
 						<span data-role="duration-mobile">0:00</span>
 					</div>
-					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-forward" aria-label="<?php esc_attr_e( '۳۰ ثانیه جلو', 'seyedcast' ); ?>">+۳۰</button>
+					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="seek-forward" aria-label="<?php esc_attr_e( '۳۰ ثانیه جلو', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon seyedcast-icon--fwd" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12.5 6.2l5.7 5.8-5.7 5.8V14c-4.4 0-7.5 1.4-9.7 4.4.8-4.6 3.7-9.2 9.7-10.2V6.2zm8.2.6v10.4h1.8V6.8h-1.8z"/></svg>
+							<em>30</em>
+						</span>
+					</button>
 					<select class="seyedcast-speed" data-action="speed" aria-label="<?php esc_attr_e( 'سرعت پخش', 'seyedcast' ); ?>">
 						<option value="0.75">۰.۷۵×</option>
 						<option value="1" selected>۱×</option>
@@ -195,7 +230,11 @@ class Seyedcast_Assets {
 						<option value="1.5">۱.۵×</option>
 						<option value="2">۲×</option>
 					</select>
-					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="close" aria-label="<?php esc_attr_e( 'بستن پلیر', 'seyedcast' ); ?>">×</button>
+					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="close" aria-label="<?php esc_attr_e( 'بستن پلیر', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon seyedcast-icon--close" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+						</span>
+					</button>
 				</div>
 			</div>
 			<audio id="seyedcast-audio" preload="metadata" playsinline></audio>

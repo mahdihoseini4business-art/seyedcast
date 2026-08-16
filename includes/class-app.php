@@ -41,7 +41,7 @@ class Seyedcast_App {
 	}
 
 	/**
-	 * Strip theme styles/scripts so the app shell is self-contained.
+	 * Strip only active-theme chrome so plugin assets (e.g. Direct SMS Contact) keep working.
 	 */
 	public function dequeue_theme_chrome() {
 		if ( ! Seyedcast_Assets::is_seyedcast_context() ) {
@@ -50,34 +50,49 @@ class Seyedcast_App {
 
 		global $wp_styles, $wp_scripts;
 
-		$keep_style_prefix = 'seyedcast-';
-		$keep_styles       = array( 'admin-bar', 'dashicons' );
+		$theme_uris = array_filter(
+			array(
+				trailingslashit( get_template_directory_uri() ),
+				trailingslashit( get_stylesheet_directory_uri() ),
+			)
+		);
 
 		if ( $wp_styles instanceof WP_Styles ) {
 			foreach ( (array) $wp_styles->queue as $handle ) {
-				if ( 0 === strpos( $handle, $keep_style_prefix ) ) {
+				if ( 0 === strpos( $handle, 'seyedcast-' ) || in_array( $handle, array( 'admin-bar', 'dashicons' ), true ) ) {
 					continue;
 				}
-				if ( in_array( $handle, $keep_styles, true ) ) {
+				$src = isset( $wp_styles->registered[ $handle ]->src ) ? (string) $wp_styles->registered[ $handle ]->src : '';
+				if ( ! $src ) {
 					continue;
 				}
-				wp_dequeue_style( $handle );
+				foreach ( $theme_uris as $uri ) {
+					if ( 0 === strpos( $src, $uri ) ) {
+						wp_dequeue_style( $handle );
+						break;
+					}
+				}
 			}
 		}
 
 		if ( $wp_scripts instanceof WP_Scripts ) {
 			foreach ( (array) $wp_scripts->queue as $handle ) {
-				if ( 0 === strpos( $handle, 'seyedcast-' ) ) {
+				if ( 0 === strpos( $handle, 'seyedcast-' ) || in_array( $handle, array( 'admin-bar', 'hoverintent-js' ), true ) ) {
 					continue;
 				}
-				if ( in_array( $handle, array( 'admin-bar', 'hoverintent-js' ), true ) ) {
+				if ( 0 === strpos( $handle, 'wp-' ) || 'jquery' === $handle || 0 === strpos( $handle, 'jquery-' ) ) {
 					continue;
 				}
-				// Leave core WP scripts that may be required by admin bar.
-				if ( 0 === strpos( $handle, 'wp-' ) ) {
+				$src = isset( $wp_scripts->registered[ $handle ]->src ) ? (string) $wp_scripts->registered[ $handle ]->src : '';
+				if ( ! $src ) {
 					continue;
 				}
-				wp_dequeue_script( $handle );
+				foreach ( $theme_uris as $uri ) {
+					if ( 0 === strpos( $src, $uri ) ) {
+						wp_dequeue_script( $handle );
+						break;
+					}
+				}
 			}
 		}
 	}

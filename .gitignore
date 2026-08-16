@@ -1,11 +1,7 @@
-﻿# OS / editor
-.DS_Store
+﻿.DS_Store
 Thumbs.db
-*.swp
+*.zip
 .idea/
 .vscode/
-
-# Packages / build
 node_modules/
 vendor/
-*.zip

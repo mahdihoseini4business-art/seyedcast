@@ -6,13 +6,13 @@
 	position: fixed;
 	inset-inline: 0;
 	bottom: 0;
-	z-index: 99999;
+	z-index: 99990;
 	background: var(--sc-player-bg);
 	backdrop-filter: blur(22px) saturate(1.15);
 	-webkit-backdrop-filter: blur(22px) saturate(1.15);
 	border-top: 1px solid var(--sc-player-line);
 	box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.22);
-	font-family: inherit;
+	font-family: "Vazirmatn", "IRANSansX", "Segoe UI", Tahoma, sans-serif;
 	color: var(--sc-text, #fff);
 	line-height: 1.45;
 	letter-spacing: 0;
@@ -152,21 +152,23 @@
 }
 
 .seyedcast-btn--icon {
-	min-width: 40px;
-	height: 36px;
-	padding: 0 0.4rem;
+	min-width: 42px;
+	height: 42px;
+	padding: 0;
 	background: transparent;
 	color: inherit;
 	border: 0;
-	border-radius: 10px;
+	border-radius: 12px;
 	cursor: pointer;
 	font-family: inherit;
-	font-size: 0.78rem;
-	font-weight: 700;
-	opacity: 0.85;
-	transition: background 0.2s ease, opacity 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.9;
+	transition: background 0.2s ease, opacity 0.2s ease, transform 0.15s ease;
 	-webkit-tap-highlight-color: transparent;
 	touch-action: manipulation;
+	line-height: 0;
 }
 
 .seyedcast-btn--icon:hover {
@@ -175,19 +177,23 @@
 }
 
 .seyedcast-btn--play {
-	width: 46px;
-	height: 46px;
+	width: 48px;
+	height: 48px;
+	padding: 0;
 	border-radius: 999px;
 	border: 0;
 	background: var(--sc-primary, #1db954);
 	color: #fff;
 	cursor: pointer;
-	display: grid;
-	place-items: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	box-shadow: 0 6px 16px color-mix(in srgb, var(--sc-primary, #1db954) 40%, transparent);
 	transition: transform 0.2s var(--sc-ease), filter 0.2s ease;
 	-webkit-tap-highlight-color: transparent;
 	touch-action: manipulation;
+	line-height: 0;
+	flex-shrink: 0;
 }
 
 .seyedcast-btn--play:hover {
@@ -199,21 +205,63 @@
 	transform: scale(0.95);
 }
 
-.seyedcast-icon-play {
-	width: 0;
-	height: 0;
-	border-style: solid;
-	border-width: 7px 0 7px 12px;
-	border-color: transparent transparent transparent currentColor;
-	margin-inline-start: 2px;
+.seyedcast-icon-play,
+.seyedcast-icon-pause {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	line-height: 0;
 }
 
-.seyedcast-icon-pause {
-	width: 12px;
-	height: 12px;
-	background:
-		linear-gradient(currentColor, currentColor) 0 0 / 4px 100% no-repeat,
-		linear-gradient(currentColor, currentColor) 100% 0 / 4px 100% no-repeat;
+.seyedcast-icon-play svg {
+	/* Optical center: play triangle reads left-heavy */
+	margin-inline-start: 1px;
+}
+
+.seyedcast-icon-play svg,
+.seyedcast-icon-pause svg,
+.seyedcast-icon svg {
+	display: block;
+	flex-shrink: 0;
+}
+
+.seyedcast-icon {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	line-height: 0;
+}
+
+.seyedcast-icon em {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-style: normal;
+	font-size: 0.58rem;
+	font-weight: 800;
+	font-family: "Vazirmatn", "Segoe UI", Tahoma, sans-serif;
+	letter-spacing: -0.02em;
+	pointer-events: none;
+	line-height: 1;
+	/* Sit over the skip glyph body */
+	transform: translateY(1px);
+}
+
+.seyedcast-icon--back svg,
+.seyedcast-icon--fwd svg {
+	opacity: 0.92;
+}
+
+.seyedcast-icon--close {
+	width: 20px;
+	height: 20px;
 }
 
 .seyedcast-sticky-player__progress {
@@ -251,8 +299,6 @@
 }
 
 .seyedcast-sticky-player [data-action="close"] {
-	font-size: 1.25rem;
-	line-height: 1;
 	opacity: 0.55;
 }
 
@@ -507,4 +553,20 @@ body.seyedcast-preset-soundcloud .seyedcast-pwa-prompt__card {
 		animation: none !important;
 		transition: none !important;
 	}
+}
+
+/* Keep floating contact widgets (e.g. Direct SMS Contact) clear of the sticky player */
+body.seyedcast-player-open [class*="direct-sms"],
+body.seyedcast-player-open [id*="direct-sms"],
+body.seyedcast-player-open [class*="direct_sms"],
+body.seyedcast-player-open [id*="direct_sms"],
+body.seyedcast-player-open .dsc-floating,
+body.seyedcast-player-open .dsc-button,
+body.seyedcast-player-open .dsc-contact,
+body.seyedcast-player-open [class*="sms-contact"],
+body.seyedcast-player-open [id*="sms-contact"],
+body.seyedcast-player-open .floating-contact,
+body.seyedcast-player-open .contact-floating-btn {
+	bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)) !important;
+	z-index: 100000 !important;
 }

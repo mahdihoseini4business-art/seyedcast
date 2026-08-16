@@ -1,4 +1,4 @@
-/* Seyedcast UI — inherits site fonts, RTL/Persian friendly */
+/* Seyedcast UI — Vazirmatn, RTL/Persian friendly */
 .seyedcast-app {
 	--sc-radius: 16px;
 	--sc-gap: 1.25rem;
@@ -7,7 +7,7 @@
 	--sc-line: color-mix(in srgb, var(--sc-text) 12%, transparent);
 	--sc-glow: color-mix(in srgb, var(--sc-primary) 35%, transparent);
 	--sc-card: color-mix(in srgb, var(--sc-surface) 88%, var(--sc-bg));
-	font-family: inherit;
+	font-family: "Vazirmatn", "IRANSansX", "Segoe UI", Tahoma, sans-serif;
 	color: var(--sc-text);
 	background: var(--sc-bg);
 	min-height: 72vh;
@@ -435,20 +435,23 @@
 }
 
 .seyedcast-play-btn {
-	width: 46px;
-	height: 46px;
-	border: 0;
+	width: 44px;
+	height: 44px;
 	border-radius: 999px;
+	border: 0;
 	background: var(--sc-primary);
 	color: #fff;
 	cursor: pointer;
-	display: grid;
-	place-items: center;
-	transition: transform 0.2s var(--sc-ease), filter 0.2s var(--sc-ease);
-	box-shadow: 0 8px 18px var(--sc-glow);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	flex-shrink: 0;
+	box-shadow: 0 8px 20px var(--sc-glow);
+	transition: transform 0.2s var(--sc-ease), filter 0.2s var(--sc-ease);
 	-webkit-tap-highlight-color: transparent;
 	touch-action: manipulation;
+	line-height: 0;
+	padding: 0;
 }
 
 .seyedcast-play-btn:hover {
@@ -462,12 +465,17 @@
 
 .seyedcast-play-btn span,
 .seyedcast-play-btn .seyedcast-icon-play-tri {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	width: 0;
 	height: 0;
 	border-style: solid;
-	border-width: 7px 0 7px 12px;
+	border-width: 6px 0 6px 11px;
 	border-color: transparent transparent transparent currentColor;
+	margin: 0;
 	margin-inline-start: 2px;
+	background: none;
 }
 
 .seyedcast-play-btn.is-playing span,
@@ -531,7 +539,8 @@
 	border-width: 6px 0 6px 10px;
 	border-color: transparent transparent transparent currentColor;
 	margin-inline-end: 0.55rem;
-	vertical-align: -1px;
+	vertical-align: middle;
+	transform: translateY(-1px);
 }
 
 .seyedcast-prose {
