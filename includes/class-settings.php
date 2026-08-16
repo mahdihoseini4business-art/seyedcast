@@ -1,342 +1,351 @@
 <?php
 /**
- * صفحه تنظیمات افزونه
+ * Plugin settings.
+ *
+ * @package Seyedcast
  */
 
-if (!defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
-class SeyedCast_Settings {
+/**
+ * Class Seyedcast_Settings
+ */
+class Seyedcast_Settings {
 
-    private static $instance = null;
-    private $option_name = 'seyedcast_';
-    private $settings_page;
+	const OPTION_KEY = 'seyedcast_settings';
 
-    public static function get_instance() {
-        if (null === self::$instance) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_init', array( $this, 'register_settings' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+		add_action( 'update_option_' . self::OPTION_KEY, array( $this, 'maybe_flush_rewrites' ), 10, 2 );
+	}
 
-    private function __construct() {
-        add_action('admin_menu', array($this, 'add_settings_menu'));
-        add_action('admin_init', array($this, 'register_settings'));
-        add_action('admin_enqueue_scripts', array($this, 'admin_scripts'));
-    }
+	/**
+	 * Default settings.
+	 *
+	 * @return array
+	 */
+	public static function defaults() {
+		return array(
+			'base_slug'         => 'podcasts',
+			'archive_title'     => 'پادکست‌های آموزشی',
+			'design_preset'     => 'spotify',
+			'colors'            => array(
+				'primary'    => '',
+				'background' => '',
+				'surface'    => '',
+				'text'       => '',
+				'accent'     => '',
+			),
+			'featured_mode'     => 'auto',
+			'featured_show_id'  => 0,
+			'featured_cta'      => 'گوش دهید',
+			'sidebar_banners'   => array(),
+			'upcoming_events'   => array(),
+			'pwa_enabled'       => 1,
+			'pwa_prompt'        => 1,
+			'pwa_name'          => 'Seyedcast',
+			'pwa_short_name'    => 'Seyedcast',
+			'pwa_theme_color'   => '#121212',
+			'pwa_bg_color'      => '#121212',
+			'pwa_icon_192'      => 0,
+			'pwa_icon_512'      => 0,
+		);
+	}
 
-    /**
-     * اضافه کردن منوی تنظیمات
-     */
-    public function add_settings_menu() {
-        $this->settings_page = add_submenu_page(
-            'edit.php?post_type=podcast_episode',
-            __('تنظیمات پادکست', 'seyedcast'),
-            __('تنظیمات', 'seyedcast'),
-            'manage_options',
-            'seyedcast-settings',
-            array($this, 'render_settings_page')
-        );
-    }
+	/**
+	 * Design presets (CSS variable values).
+	 *
+	 * @return array
+	 */
+	public static function presets() {
+		return array(
+			'spotify' => array(
+				'label'      => 'اسپاتیفای تیره',
+				'primary'    => '#1ED760',
+				'background' => '#0B0B0B',
+				'surface'    => '#181818',
+				'text'       => '#F5F5F5',
+				'accent'     => '#1DB954',
+			),
+			'castbox' => array(
+				'label'      => 'کست‌باکس',
+				'primary'    => '#FF6A3D',
+				'background' => '#0B1118',
+				'surface'    => '#16202B',
+				'text'       => '#F7F8FA',
+				'accent'     => '#FF9A6B',
+			),
+			'apple'   => array(
+				'label'      => 'اپل پادکست',
+				'primary'    => '#8B5CF6',
+				'background' => '#F4F2F8',
+				'surface'    => '#FFFFFF',
+				'text'       => '#1C1C1E',
+				'accent'     => '#A78BFA',
+			),
+			'ytmusic' => array(
+				'label'      => 'یوتیوب میوزیک',
+				'primary'    => '#FF0033',
+				'background' => '#000000',
+				'surface'    => '#1A1A1A',
+				'text'       => '#FFFFFF',
+				'accent'     => '#FF4D6D',
+			),
+			'soundcloud' => array(
+				'label'      => 'ساندکلاد',
+				'primary'    => '#FF5500',
+				'background' => '#F6F6F6',
+				'surface'    => '#FFFFFF',
+				'text'       => '#222222',
+				'accent'     => '#FF7A33',
+			),
+		);
+	}
 
-    /**
-     * بارگذاری اسکریپت‌های ادمین
-     */
-    public function admin_scripts($hook) {
-        if ($hook !== $this->settings_page) {
-            return;
-        }
+	/**
+	 * Get merged settings.
+	 *
+	 * @return array
+	 */
+	public static function get() {
+		$stored = get_option( self::OPTION_KEY, array() );
+		if ( ! is_array( $stored ) ) {
+			$stored = array();
+		}
+		$defaults = self::defaults();
+		$merged   = wp_parse_args( $stored, $defaults );
+		$merged['colors'] = wp_parse_args( isset( $stored['colors'] ) && is_array( $stored['colors'] ) ? $stored['colors'] : array(), $defaults['colors'] );
+		if ( empty( $merged['sidebar_banners'] ) || ! is_array( $merged['sidebar_banners'] ) ) {
+			$merged['sidebar_banners'] = array();
+		}
+		if ( empty( $merged['upcoming_events'] ) || ! is_array( $merged['upcoming_events'] ) ) {
+			$merged['upcoming_events'] = array();
+		}
+		return $merged;
+	}
 
-        wp_enqueue_media();
-        wp_enqueue_style('wp-color-picker');
-        wp_enqueue_script('wp-color-picker');
-        
-        wp_enqueue_style(
-            'seyedcast-admin',
-            SEYEDCAST_PLUGIN_URL . 'admin/css/admin.css',
-            array(),
-            SEYEDCAST_VERSION
-        );
+	/**
+	 * Resolved theme colors (preset + overrides).
+	 *
+	 * @return array
+	 */
+	public static function resolved_colors() {
+		$settings = self::get();
+		$presets  = self::presets();
+		$key      = isset( $settings['design_preset'] ) ? $settings['design_preset'] : 'spotify';
+		$base     = isset( $presets[ $key ] ) ? $presets[ $key ] : $presets['spotify'];
+		$out      = array();
+		foreach ( array( 'primary', 'background', 'surface', 'text', 'accent' ) as $field ) {
+			$custom = isset( $settings['colors'][ $field ] ) ? $settings['colors'][ $field ] : '';
+			$out[ $field ] = $custom ? $custom : $base[ $field ];
+		}
+		return $out;
+	}
 
-        wp_enqueue_script(
-            'seyedcast-admin',
-            SEYEDCAST_PLUGIN_URL . 'admin/js/admin.js',
-            array('jquery', 'wp-color-picker'),
-            SEYEDCAST_VERSION,
-            true
-        );
-    }
+	/**
+	 * Admin menu.
+	 */
+	public function register_menu() {
+		add_menu_page(
+			'Seyedcast',
+			'Seyedcast',
+			'manage_options',
+			'seyedcast',
+			array( $this, 'render_page' ),
+			'dashicons-controls-volumeon',
+			26
+		);
 
-    /**
-     * ثبت تنظیمات
-     */
-    public function register_settings() {
-        // تب عمومی
-        register_setting('seyedcast_settings', $this->option_name . 'podcast_title', 'sanitize_text_field');
-        register_setting('seyedcast_settings', $this->option_name . 'podcast_description', 'sanitize_textarea_field');
-        register_setting('seyedcast_settings', $this->option_name . 'podcast_cover', 'esc_url_raw');
-        register_setting('seyedcast_settings', $this->option_name . 'episodes_per_page', 'intval');
+		add_submenu_page(
+			'seyedcast',
+			__( 'تنظیمات', 'seyedcast' ),
+			__( 'تنظیمات', 'seyedcast' ),
+			'manage_options',
+			'seyedcast',
+			array( $this, 'render_page' )
+		);
+	}
 
-        // تب پلیر
-        register_setting('seyedcast_settings', $this->option_name . 'player_color', 'sanitize_hex_color');
-        register_setting('seyedcast_settings', $this->option_name . 'player_bg_color', 'sanitize_hex_color');
-        register_setting('seyedcast_settings', $this->option_name . 'player_autoplay', 'intval');
-        register_setting('seyedcast_settings', $this->option_name . 'player_mode', 'sanitize_text_field');
+	/**
+	 * Register settings API.
+	 */
+	public function register_settings() {
+		register_setting(
+			'seyedcast_settings_group',
+			self::OPTION_KEY,
+			array(
+				'type'              => 'array',
+				'sanitize_callback' => array( $this, 'sanitize' ),
+				'default'           => self::defaults(),
+			)
+		);
+	}
 
-        // تب سئو
-        register_setting('seyedcast_settings', $this->option_name . 'seo_title', 'sanitize_text_field');
-        register_setting('seyedcast_settings', $this->option_name . 'seo_description', 'sanitize_textarea_field');
-        register_setting('seyedcast_settings', $this->option_name . 'seo_keywords', 'sanitize_text_field');
+	/**
+	 * Sanitize settings.
+	 *
+	 * @param array $input Raw input.
+	 * @return array
+	 */
+	public function sanitize( $input ) {
+		$defaults = self::defaults();
+		$existing = self::get();
+		$out      = $defaults;
+		$presets  = array_keys( self::presets() );
 
-        // تب آمار
-        register_setting('seyedcast_settings', $this->option_name . 'enable_stats', 'intval');
-        register_setting('seyedcast_settings', $this->option_name . 'show_play_count', 'intval');
-        register_setting('seyedcast_settings', $this->option_name . 'show_download_count', 'intval');
-    }
+		if ( ! is_array( $input ) ) {
+			return $existing;
+		}
 
-    /**
-     * رندر صفحه تنظیمات
-     */
-    public function render_settings_page() {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
+		$out['base_slug']     = isset( $input['base_slug'] ) ? sanitize_title( $input['base_slug'] ) : $existing['base_slug'];
+		if ( '' === $out['base_slug'] ) {
+			$out['base_slug'] = 'podcasts';
+		}
+		$out['archive_title'] = isset( $input['archive_title'] ) ? sanitize_text_field( $input['archive_title'] ) : $existing['archive_title'];
+		$preset               = isset( $input['design_preset'] ) ? sanitize_key( $input['design_preset'] ) : $existing['design_preset'];
+		$out['design_preset'] = in_array( $preset, $presets, true ) ? $preset : 'spotify';
 
-        $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
-        ?>
-        <div class="wrap">
-            <h1><?php _e('تنظیمات پادکست', 'seyedcast'); ?></h1>
+		$out['colors'] = array();
+		foreach ( array( 'primary', 'background', 'surface', 'text', 'accent' ) as $field ) {
+			if ( isset( $input['colors'][ $field ] ) ) {
+				$val = sanitize_hex_color( $input['colors'][ $field ] );
+				$out['colors'][ $field ] = $val ? $val : '';
+			} else {
+				$out['colors'][ $field ] = isset( $existing['colors'][ $field ] ) ? $existing['colors'][ $field ] : '';
+			}
+		}
 
-            <?php settings_errors('seyedcast_settings'); ?>
+		$active_tab = isset( $input['_tab'] ) ? sanitize_key( $input['_tab'] ) : '';
 
-            <nav class="nav-tab-wrapper">
-                <a href="?post_type=podcast_episode&page=seyedcast-settings&tab=general" 
-                   class="nav-tab <?php echo $active_tab === 'general' ? 'nav-tab-active' : ''; ?>">
-                   <?php _e('عمومی', 'seyedcast'); ?>
-                </a>
-                <a href="?post_type=podcast_episode&page=seyedcast-settings&tab=player" 
-                   class="nav-tab <?php echo $active_tab === 'player' ? 'nav-tab-active' : ''; ?>">
-                   <?php _e('پلیر', 'seyedcast'); ?>
-                </a>
-                <a href="?post_type=podcast_episode&page=seyedcast-settings&tab=seo" 
-                   class="nav-tab <?php echo $active_tab === 'seo' ? 'nav-tab-active' : ''; ?>">
-                   <?php _e('سئو', 'seyedcast'); ?>
-                </a>
-                <a href="?post_type=podcast_episode&page=seyedcast-settings&tab=stats" 
-                   class="nav-tab <?php echo $active_tab === 'stats' ? 'nav-tab-active' : ''; ?>">
-                   <?php _e('آمار', 'seyedcast'); ?>
-                </a>
-            </nav>
+		$out['pwa_enabled']    = (int) $existing['pwa_enabled'];
+		$out['pwa_prompt']     = (int) $existing['pwa_prompt'];
+		$out['pwa_name']       = isset( $input['pwa_name'] ) ? sanitize_text_field( $input['pwa_name'] ) : $existing['pwa_name'];
+		$out['pwa_short_name'] = isset( $input['pwa_short_name'] ) ? sanitize_text_field( $input['pwa_short_name'] ) : $existing['pwa_short_name'];
+		$out['pwa_theme_color'] = $existing['pwa_theme_color'];
+		if ( isset( $input['pwa_theme_color'] ) ) {
+			$theme_color = sanitize_hex_color( $input['pwa_theme_color'] );
+			if ( $theme_color ) {
+				$out['pwa_theme_color'] = $theme_color;
+			}
+		}
+		$out['pwa_bg_color'] = $existing['pwa_bg_color'];
+		if ( isset( $input['pwa_bg_color'] ) ) {
+			$bg_color = sanitize_hex_color( $input['pwa_bg_color'] );
+			if ( $bg_color ) {
+				$out['pwa_bg_color'] = $bg_color;
+			}
+		}
+		$out['pwa_icon_192'] = isset( $input['pwa_icon_192'] ) ? absint( $input['pwa_icon_192'] ) : (int) $existing['pwa_icon_192'];
+		$out['pwa_icon_512'] = isset( $input['pwa_icon_512'] ) ? absint( $input['pwa_icon_512'] ) : (int) $existing['pwa_icon_512'];
 
-            <div class="tab-content">
-                <form method="post" action="options.php">
-                    <?php
-                    settings_fields('seyedcast_settings');
+		if ( 'pwa' === $active_tab ) {
+			$out['pwa_enabled'] = ! empty( $input['pwa_enabled'] ) ? 1 : 0;
+			$out['pwa_prompt']  = ! empty( $input['pwa_prompt'] ) ? 1 : 0;
+		}
 
-                    switch ($active_tab) {
-                        case 'player':
-                            $this->render_player_tab();
-                            break;
-                        case 'seo':
-                            $this->render_seo_tab();
-                            break;
-                        case 'stats':
-                            $this->render_stats_tab();
-                            break;
-                        default:
-                            $this->render_general_tab();
-                            break;
-                    }
+		if ( 'page' === $active_tab ) {
+			$mode = isset( $input['featured_mode'] ) ? sanitize_key( $input['featured_mode'] ) : 'auto';
+			$out['featured_mode']    = in_array( $mode, array( 'auto', 'manual' ), true ) ? $mode : 'auto';
+			$out['featured_show_id'] = isset( $input['featured_show_id'] ) ? absint( $input['featured_show_id'] ) : 0;
+			$out['featured_cta']     = isset( $input['featured_cta'] ) ? sanitize_text_field( $input['featured_cta'] ) : $defaults['featured_cta'];
 
-                    submit_button();
-                    ?>
-                </form>
-            </div>
-        </div>
-        <?php
-    }
+			$out['sidebar_banners'] = array();
+			if ( ! empty( $input['sidebar_banners'] ) && is_array( $input['sidebar_banners'] ) ) {
+				$count = 0;
+				foreach ( $input['sidebar_banners'] as $banner ) {
+					if ( $count >= 3 || ! is_array( $banner ) ) {
+						break;
+					}
+					$image_id = isset( $banner['image_id'] ) ? absint( $banner['image_id'] ) : 0;
+					if ( ! $image_id ) {
+						continue;
+					}
+					$out['sidebar_banners'][] = array(
+						'image_id' => $image_id,
+						'url'      => isset( $banner['url'] ) ? esc_url_raw( $banner['url'] ) : '',
+						'alt'      => isset( $banner['alt'] ) ? sanitize_text_field( $banner['alt'] ) : '',
+					);
+					$count++;
+				}
+			}
 
-    /**
-     * تب تنظیمات عمومی
-     */
-    private function render_general_tab() {
-        ?>
-        <table class="form-table">
-            <tr>
-                <th><label for="podcast_title"><?php _e('عنوان پادکست', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="text" id="podcast_title" name="<?php echo $this->option_name; ?>podcast_title" 
-                           value="<?php echo esc_attr(get_option($this->option_name . 'podcast_title')); ?>" 
-                           class="regular-text" />
-                </td>
-            </tr>
-            <tr>
-                <th><label for="podcast_description"><?php _e('توضیحات پادکست', 'seyedcast'); ?></label></th>
-                <td>
-                    <textarea id="podcast_description" name="<?php echo $this->option_name; ?>podcast_description" 
-                              rows="5" class="large-text"><?php echo esc_textarea(get_option($this->option_name . 'podcast_description')); ?></textarea>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="podcast_cover"><?php _e('تصویر کاور پیش‌فرض', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="url" id="podcast_cover" name="<?php echo $this->option_name; ?>podcast_cover" 
-                           value="<?php echo esc_url(get_option($this->option_name . 'podcast_cover')); ?>" 
-                           class="regular-text" />
-                    <button type="button" class="button seyedcast-upload-image" data-target="podcast_cover">
-                        <?php _e('انتخاب تصویر', 'seyedcast'); ?>
-                    </button>
-                    <?php if (get_option($this->option_name . 'podcast_cover')): ?>
-                    <p>
-                        <img src="<?php echo esc_url(get_option($this->option_name . 'podcast_cover')); ?>" 
-                             style="max-width: 200px; margin-top: 10px;" />
-                    </p>
-                    <?php endif; ?>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="episodes_per_page"><?php _e('تعداد اپیزود در هر صفحه', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="number" id="episodes_per_page" name="<?php echo $this->option_name; ?>episodes_per_page" 
-                           value="<?php echo esc_attr(get_option($this->option_name . 'episodes_per_page')); ?>" 
-                           min="1" max="50" style="width: 100px;" />
-                </td>
-            </tr>
-        </table>
-        <?php
-    }
+			$out['upcoming_events'] = array();
+			if ( ! empty( $input['upcoming_events'] ) && is_array( $input['upcoming_events'] ) ) {
+				$count = 0;
+				foreach ( $input['upcoming_events'] as $event ) {
+					if ( $count >= 5 || ! is_array( $event ) ) {
+						break;
+					}
+					$starts = isset( $event['starts_at'] ) ? sanitize_text_field( $event['starts_at'] ) : '';
+					if ( ! $starts ) {
+						continue;
+					}
+					$out['upcoming_events'][] = array(
+						'title'      => isset( $event['title'] ) ? sanitize_text_field( $event['title'] ) : '',
+						'episode_id' => isset( $event['episode_id'] ) ? absint( $event['episode_id'] ) : 0,
+						'starts_at'  => $starts,
+					);
+					$count++;
+				}
+			}
+		} else {
+			$out['featured_mode']    = $existing['featured_mode'];
+			$out['featured_show_id'] = (int) $existing['featured_show_id'];
+			$out['featured_cta']     = $existing['featured_cta'];
+			$out['sidebar_banners']  = $existing['sidebar_banners'];
+			$out['upcoming_events']  = $existing['upcoming_events'];
+		}
 
-    /**
-     * تب تنظیمات پلیر
-     */
-    private function render_player_tab() {
-        ?>
-        <table class="form-table">
-            <tr>
-                <th><label for="player_color"><?php _e('رنگ اصلی پلیر', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="text" id="player_color" name="<?php echo $this->option_name; ?>player_color" 
-                           value="<?php echo esc_attr(get_option($this->option_name . 'player_color')); ?>" 
-                           class="seyedcast-color-picker" />
-                </td>
-            </tr>
-            <tr>
-                <th><label for="player_bg_color"><?php _e('رنگ پس‌زمینه پلیر', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="text" id="player_bg_color" name="<?php echo $this->option_name; ?>player_bg_color" 
-                           value="<?php echo esc_attr(get_option($this->option_name . 'player_bg_color')); ?>" 
-                           class="seyedcast-color-picker" />
-                </td>
-            </tr>
-            <tr>
-                <th><label for="player_autoplay"><?php _e('پخش خودکار', 'seyedcast'); ?></label></th>
-                <td>
-                    <select id="player_autoplay" name="<?php echo $this->option_name; ?>player_autoplay">
-                        <option value="0" <?php selected(get_option($this->option_name . 'player_autoplay'), 0); ?>>
-                            <?php _e('غیرفعال', 'seyedcast'); ?>
-                        </option>
-                        <option value="1" <?php selected(get_option($this->option_name . 'player_autoplay'), 1); ?>>
-                            <?php _e('فعال', 'seyedcast'); ?>
-                        </option>
-                    </select>
-                    <p class="description"><?php _e('توجه: اکثر مرورگرها پخش خودکار را بلاک می‌کنند', 'seyedcast'); ?></p>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="player_mode"><?php _e('حالت پلیر', 'seyedcast'); ?></label></th>
-                <td>
-                    <select id="player_mode" name="<?php echo $this->option_name; ?>player_mode">
-                        <option value="simple" <?php selected(get_option($this->option_name . 'player_mode'), 'simple'); ?>>
-                            <?php _e('ساده', 'seyedcast'); ?>
-                        </option>
-                        <option value="advanced" <?php selected(get_option($this->option_name . 'player_mode'), 'advanced'); ?>>
-                            <?php _e('پیشرفته', 'seyedcast'); ?>
-                        </option>
-                    </select>
-                </td>
-            </tr>
-        </table>
-        <?php
-    }
+		return $out;
+	}
 
-    /**
-     * تب تنظیمات سئو
-     */
-    private function render_seo_tab() {
-        ?>
-        <table class="form-table">
-            <tr>
-                <th><label for="seo_title"><?php _e('عنوان صفحه پادکست', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="text" id="seo_title" name="<?php echo $this->option_name; ?>seo_title" 
-                           value="<?php echo esc_attr(get_option($this->option_name . 'seo_title')); ?>" 
-                           class="regular-text" />
-                </td>
-            </tr>
-            <tr>
-                <th><label for="seo_description"><?php _e('توضیحات متا', 'seyedcast'); ?></label></th>
-                <td>
-                    <textarea id="seo_description" name="<?php echo $this->option_name; ?>seo_description" 
-                              rows="3" class="large-text"><?php echo esc_textarea(get_option($this->option_name . 'seo_description')); ?></textarea>
-                    <p class="description"><?php _e('حداکثر 160 کاراکتر', 'seyedcast'); ?></p>
-                </td>
-            </tr>
-            <tr>
-                <th><label for="seo_keywords"><?php _e('کلمات کلیدی', 'seyedcast'); ?></label></th>
-                <td>
-                    <input type="text" id="seo_keywords" name="<?php echo $this->option_name; ?>seo_keywords" 
-                           value="<?php echo esc_attr(get_option($this->option_name . 'seo_keywords')); ?>" 
-                           class="large-text" />
-                    <p class="description"><?php _e('با کاما جدا کنید', 'seyedcast'); ?></p>
-                </td>
-            </tr>
-        </table>
-        <?php
-    }
+	/**
+	 * Flush rewrites when slug changes.
+	 *
+	 * @param mixed $old Old value.
+	 * @param mixed $new New value.
+	 */
+	public function maybe_flush_rewrites( $old, $new ) {
+		$old_slug = is_array( $old ) && isset( $old['base_slug'] ) ? $old['base_slug'] : '';
+		$new_slug = is_array( $new ) && isset( $new['base_slug'] ) ? $new['base_slug'] : '';
+		if ( $old_slug !== $new_slug ) {
+			Seyedcast_Rewrite::add_rules();
+			flush_rewrite_rules();
+		}
+	}
 
-    /**
-     * تب تنظیمات آمار
-     */
-    private function render_stats_tab() {
-        ?>
-        <table class="form-table">
-            <tr>
-                <th><?php _e('فعال‌سازی آمار', 'seyedcast'); ?></th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="<?php echo $this->option_name; ?>enable_stats" value="1" 
-                               <?php checked(get_option($this->option_name . 'enable_stats'), 1); ?> />
-                        <?php _e('فعال‌سازی سیستم آمار', 'seyedcast'); ?>
-                    </label>
-                </td>
-            </tr>
-            <tr>
-                <th><?php _e('نمایش آمار', 'seyedcast'); ?></th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="<?php echo $this->option_name; ?>show_play_count" value="1" 
-                               <?php checked(get_option($this->option_name . 'show_play_count'), 1); ?> />
-                        <?php _e('نمایش تعداد پخش', 'seyedcast'); ?>
-                    </label>
-                    <br />
-                    <label>
-                        <input type="checkbox" name="<?php echo $this->option_name; ?>show_download_count" value="1" 
-                               <?php checked(get_option($this->option_name . 'show_download_count'), 1); ?> />
-                        <?php _e('نمایش تعداد دانلود', 'seyedcast'); ?>
-                    </label>
-                </td>
-            </tr>
-            <tr>
-                <th><?php _e('پاکسازی آمار', 'seyedcast'); ?></th>
-                <td>
-                    <button type="button" class="button button-secondary" id="seyedcast-clear-stats">
-                        <?php _e('پاکسازی آمار قدیمی', 'seyedcast'); ?>
-                    </button>
-                    <p class="description"><?php _e('آمار بیش از 90 روز پاکسازی می‌شود', 'seyedcast'); ?></p>
-                </td>
-            </tr>
-        </table>
-        <?php
-    }
+	/**
+	 * Enqueue settings assets.
+	 *
+	 * @param string $hook Hook.
+	 */
+	public function enqueue( $hook ) {
+		if ( 'toplevel_page_seyedcast' !== $hook ) {
+			return;
+		}
+		wp_enqueue_media();
+		wp_enqueue_style( 'wp-color-picker' );
+		wp_enqueue_script( 'wp-color-picker' );
+		wp_enqueue_style( 'seyedcast-admin', SEYEDCAST_URL . 'admin/css/admin.css', array(), SEYEDCAST_VERSION );
+		wp_enqueue_script( 'seyedcast-admin', SEYEDCAST_URL . 'admin/js/admin.js', array( 'jquery', 'wp-color-picker' ), SEYEDCAST_VERSION, true );
+	}
+
+	/**
+	 * Render settings page.
+	 */
+	public function render_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$settings = self::get();
+		$presets  = self::presets();
+		include SEYEDCAST_PATH . 'admin/views/settings-page.php';
+	}
 }

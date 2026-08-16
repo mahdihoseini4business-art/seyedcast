@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Seyedcast">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1DB954"/>
+      <stop offset="100%" stop-color="#121212"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="url(#g)"/>
+  <circle cx="256" cy="250" r="90" fill="none" stroke="#fff" stroke-width="28"/>
+  <circle cx="256" cy="250" r="28" fill="#fff"/>
+  <path d="M180 360c30 36 122 36 152 0" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
+</svg>

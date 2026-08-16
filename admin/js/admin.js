@@ -1,113 +1,79 @@
-/**
- * اسکریپت پنل مدیریت
- */
+(function ($) {
+	'use strict';
 
-(function($) {
-    'use strict';
+	function initColorPickers() {
+		$('.seyedcast-color-field').each(function () {
+			var $el = $(this);
+			if ($el.hasClass('wp-color-picker') || $el.data('wp-color-picker-bound')) {
+				return;
+			}
+			$el.wpColorPicker();
+			$el.data('wp-color-picker-bound', true);
+		});
+	}
 
-    var SeyedCastAdmin = {
-        init: function() {
-            this.bindEvents();
-            this.initColorPickers();
-        },
+	$(function () {
+		initColorPickers();
 
-        bindEvents: function() {
-            // آپلود تصویر
-            $(document).on('click', '.seyedcast-upload-image', this.uploadImage);
-            
-            // آپلود فایل صوتی
-            $(document).on('click', '.seyedcast-upload-audio', this.uploadAudio);
-            
-            // پاکسازی آمار
-            $(document).on('click', '#seyedcast-clear-stats', this.clearStats);
-        },
+		var audioFrame;
+		$('#seyedcast_select_audio').on('click', function (e) {
+			e.preventDefault();
+			if (audioFrame) {
+				audioFrame.open();
+				return;
+			}
+			audioFrame = wp.media({
+				title: 'انتخاب فایل صوتی',
+				button: { text: 'استفاده از این فایل' },
+				library: { type: 'audio' },
+				multiple: false
+			});
+			audioFrame.on('select', function () {
+				var attachment = audioFrame.state().get('selection').first().toJSON();
+				$('#seyedcast_audio_id').val(attachment.id);
+				$('#seyedcast_audio_preview').html(
+					'<a href="' + attachment.url + '" target="_blank" rel="noopener noreferrer">' +
+					(attachment.title || attachment.filename) +
+					'</a>'
+				);
+				$('#seyedcast_remove_audio').prop('disabled', false);
+			});
+			audioFrame.open();
+		});
 
-        initColorPickers: function() {
-            $('.seyedcast-color-picker').wpColorPicker();
-        },
+		$('#seyedcast_remove_audio').on('click', function (e) {
+			e.preventDefault();
+			$('#seyedcast_audio_id').val('');
+			$('#seyedcast_audio_preview').html('<em>فایلی انتخاب نشده</em>');
+			$(this).prop('disabled', true);
+		});
 
-        uploadImage: function(e) {
-            e.preventDefault();
-            
-            var targetId = $(this).data('target');
-            var frame = wp.media({
-                title: 'انتخاب تصویر',
-                button: {
-                    text: 'انتخاب'
-                },
-                multiple: false,
-                library: {
-                    type: 'image'
-                }
-            });
+		var iconFrame;
+		$('.seyedcast-select-icon').on('click', function (e) {
+			e.preventDefault();
+			var target = $(this).data('target');
+			iconFrame = wp.media({
+				title: 'انتخاب آیکون',
+				button: { text: 'انتخاب' },
+				library: { type: 'image' },
+				multiple: false
+			});
+			iconFrame.on('select', function () {
+				var attachment = iconFrame.state().get('selection').first().toJSON();
+				$('#' + target).val(attachment.id);
+				var url = (attachment.sizes && attachment.sizes.thumbnail)
+					? attachment.sizes.thumbnail.url
+					: attachment.url;
+				$('#' + target + '_preview').html('<img src="' + url + '" alt="" />');
+			});
+			iconFrame.open();
+		});
 
-            frame.on('select', function() {
-                var attachment = frame.state().get('selection').first().toJSON();
-                $('#' + targetId).val(attachment.url);
-            });
-
-            frame.open();
-        },
-
-        uploadAudio: function(e) {
-            e.preventDefault();
-            
-            var targetId = $(this).data('target');
-            var frame = wp.media({
-                title: 'انتخاب فایل صوتی',
-                button: {
-                    text: 'انتخاب'
-                },
-                multiple: false,
-                library: {
-                    type: 'audio'
-                }
-            });
-
-            frame.on('select', function() {
-                var attachment = frame.state().get('selection').first().toJSON();
-                $('#' + targetId).val(attachment.url);
-            });
-
-            frame.open();
-        },
-
-        clearStats: function(e) {
-            e.preventDefault();
-            
-            if (!confirm('آیا مطمئن هستید؟ آمار بیش از 90 روز پاکسازی خواهد شد.')) {
-                return;
-            }
-
-            var $btn = $(this);
-            $btn.prop('disabled', true).text('در حال پاکسازی...');
-
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'seyedcast_clear_stats',
-                    nonce: seyedcast_admin.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert(response.data.message);
-                    } else {
-                        alert(response.data.message || 'خطا در پاکسازی آمار');
-                    }
-                },
-                error: function() {
-                    alert('خطا در ارتباط با سرور');
-                },
-                complete: function() {
-                    $btn.prop('disabled', false).text('پاکسازی آمار قدیمی');
-                }
-            });
-        }
-    };
-
-    $(document).ready(function() {
-        SeyedCastAdmin.init();
-    });
-
+		$('.seyedcast-clear-icon').on('click', function (e) {
+			e.preventDefault();
+			var target = $(this).data('target');
+			$('#' + target).val('');
+			$('#' + target + '_preview').empty();
+		});
+	});
 })(jQuery);
