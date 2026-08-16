@@ -77,7 +77,7 @@ while ( count( $events ) < 3 ) {
 					<th scope="row"><label for="seyedcast_base_slug"><?php esc_html_e( 'اسلاگ پایه URL', 'seyedcast' ); ?></label></th>
 					<td>
 						<input type="text" class="regular-text" id="seyedcast_base_slug" name="seyedcast_settings[base_slug]" value="<?php echo esc_attr( $settings['base_slug'] ); ?>" />
-						<p class="description"><?php esc_html_e( 'مثال: podcasts → /podcasts/نام-شو/نام-اپیزود/', 'seyedcast' ); ?></p>
+						<p class="description"><?php esc_html_e( 'مثال: podcasts → /podcasts/نام-پادکست/نام-اپیزود/', 'seyedcast' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -127,14 +127,17 @@ while ( count( $events ) < 3 ) {
 		<?php endif; ?>
 
 		<?php if ( 'page' === $tab ) : ?>
-			<h2><?php esc_html_e( 'بنر ویژه بالای صفحه', 'seyedcast' ); ?></h2>
+			<h2><?php esc_html_e( 'اسلایدر بنر بالای صفحه', 'seyedcast' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'اسلایدر سه اسلاید دارد: ۱) پادکست ویژه (پربازدید یا انتخاب دستی) ۲) جدیدترین پادکست (خودکار) ۳) ادامه شنیدن بر اساس آخرین پخش کاربر در مرورگر.', 'seyedcast' ); ?>
+			</p>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'حالت بنر', 'seyedcast' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'اسلاید ویژه', 'seyedcast' ); ?></th>
 					<td>
 						<label style="display:block;margin-bottom:6px;">
 							<input type="radio" name="seyedcast_settings[featured_mode]" value="auto" <?php checked( $settings['featured_mode'], 'auto' ); ?> />
-							<?php esc_html_e( 'خودکار — پربازدیدترین شو', 'seyedcast' ); ?>
+							<?php esc_html_e( 'خودکار — پربازدیدترین پادکست', 'seyedcast' ); ?>
 						</label>
 						<label style="display:block;">
 							<input type="radio" name="seyedcast_settings[featured_mode]" value="manual" <?php checked( $settings['featured_mode'], 'manual' ); ?> />
@@ -143,7 +146,7 @@ while ( count( $events ) < 3 ) {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="seyedcast_featured_show"><?php esc_html_e( 'شو دستی', 'seyedcast' ); ?></label></th>
+					<th scope="row"><label for="seyedcast_featured_show"><?php esc_html_e( 'پادکست دستی (اسلاید ویژه)', 'seyedcast' ); ?></label></th>
 					<td>
 						<select id="seyedcast_featured_show" name="seyedcast_settings[featured_show_id]">
 							<option value="0"><?php esc_html_e( '— انتخاب کنید —', 'seyedcast' ); ?></option>
@@ -156,9 +159,31 @@ while ( count( $events ) < 3 ) {
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label for="seyedcast_featured_cta"><?php esc_html_e( 'متن دکمه CTA', 'seyedcast' ); ?></label></th>
+					<th scope="row"><label for="seyedcast_featured_cta"><?php esc_html_e( 'متن دکمه پخش بنر', 'seyedcast' ); ?></label></th>
 					<td>
 						<input type="text" class="regular-text" id="seyedcast_featured_cta" name="seyedcast_settings[featured_cta]" value="<?php echo esc_attr( $settings['featured_cta'] ); ?>" />
+					</td>
+				</tr>
+			</table>
+
+			<h2><?php esc_html_e( 'پیشنهاد و نظرات', 'seyedcast' ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'پیشنهاد برای شما', 'seyedcast' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="seyedcast_settings[suggestions_enabled]" value="1" <?php checked( ! empty( $settings['suggestions_enabled'] ) ); ?> />
+							<?php esc_html_e( 'نمایش ردیف ۵ پادکست مرتبط بر اساس ۳ پادکست اخیر شنیده‌شده در صفحه اصلی', 'seyedcast' ); ?>
+						</label>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'نظرات', 'seyedcast' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="seyedcast_settings[comments_enabled]" value="1" <?php checked( ! empty( $settings['comments_enabled'] ) ); ?> />
+							<?php esc_html_e( 'فعال‌سازی بخش نظرات در صفحه اصلی و صفحات پادکست/اپیزود', 'seyedcast' ); ?>
+						</label>
 					</td>
 				</tr>
 			</table>

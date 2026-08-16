@@ -59,7 +59,7 @@ class Seyedcast_Meta {
 
 		add_meta_box(
 			'seyedcast_show_details',
-			__( 'جزئیات شو', 'seyedcast' ),
+			__( 'جزئیات پادکست', 'seyedcast' ),
 			array( $this, 'render_show_box' ),
 			'seyedcast_show',
 			'side',
@@ -106,10 +106,10 @@ class Seyedcast_Meta {
 		$views  = (int) get_post_meta( $post->ID, Seyedcast_App::VIEW_META, true );
 		?>
 		<p>
-			<label for="seyedcast_accent_color"><strong><?php esc_html_e( 'رنگ اختصاصی شو', 'seyedcast' ); ?></strong></label>
+			<label for="seyedcast_accent_color"><strong><?php esc_html_e( 'رنگ اختصاصی پادکست', 'seyedcast' ); ?></strong></label>
 			<input type="text" class="seyedcast-color-field" id="seyedcast_accent_color" name="seyedcast_accent_color" value="<?php echo esc_attr( $accent ); ?>" data-default-color="#1DB954" />
 		</p>
-		<p class="description"><?php esc_html_e( 'برای هیرو و گرادیان صفحه شو استفاده می‌شود.', 'seyedcast' ); ?></p>
+		<p class="description"><?php esc_html_e( 'برای هیرو و گرادیان صفحه پادکست استفاده می‌شود.', 'seyedcast' ); ?></p>
 		<p>
 			<strong><?php esc_html_e( 'بازدیدها', 'seyedcast' ); ?>:</strong>
 			<?php echo esc_html( number_format_i18n( $views ) ); ?>

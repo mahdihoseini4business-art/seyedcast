@@ -145,9 +145,15 @@ class Seyedcast_Templates {
 	 * @return string
 	 */
 	public static function cover_url( $post_id, $fallback_id = 0 ) {
-		$url = get_the_post_thumbnail_url( $post_id, 'large' );
+		$url = get_the_post_thumbnail_url( $post_id, 'seyedcast_cover' );
+		if ( ! $url ) {
+			$url = get_the_post_thumbnail_url( $post_id, 'medium' );
+		}
 		if ( ! $url && $fallback_id ) {
-			$url = get_the_post_thumbnail_url( $fallback_id, 'large' );
+			$url = get_the_post_thumbnail_url( $fallback_id, 'seyedcast_cover' );
+			if ( ! $url ) {
+				$url = get_the_post_thumbnail_url( $fallback_id, 'medium' );
+			}
 		}
 		if ( ! $url ) {
 			$url = SEYEDCAST_URL . 'assets/icons/cover-placeholder.svg';
@@ -166,6 +172,7 @@ class Seyedcast_Templates {
 		$show    = $show_id ? get_post( $show_id ) : null;
 		return array(
 			'id'        => (int) $episode->ID,
+			'show_id'   => (int) $show_id,
 			'title'     => get_the_title( $episode ),
 			'show'      => $show ? get_the_title( $show ) : '',
 			'audio'     => Seyedcast_Meta::get_audio_url( $episode->ID ),

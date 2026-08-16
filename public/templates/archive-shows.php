@@ -12,12 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 ob_start();
 ?>
 <main class="seyedcast-app seyedcast-archive" dir="rtl">
-	<?php Seyedcast_Templates::partial( 'continue-listening' ); ?>
-	<?php Seyedcast_Templates::partial( 'latest-episodes' ); ?>
-
 	<section class="seyedcast-section">
 		<div class="seyedcast-section-head">
-			<h2><?php esc_html_e( 'همه شوها', 'seyedcast' ); ?></h2>
+			<h2><?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?></h2>
 			<span class="seyedcast-section-head__hint"><?php esc_html_e( 'برای شروع روی کاور بزنید', 'seyedcast' ); ?></span>
 		</div>
 		<div class="seyedcast-shows-grid">
@@ -30,7 +27,7 @@ ob_start();
 					?>
 					<a class="seyedcast-show-tile" href="<?php the_permalink(); ?>" data-seyedcast-nav>
 						<span class="seyedcast-show-tile__art">
-							<img src="<?php echo esc_url( $cover ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" />
+							<img src="<?php echo esc_url( $cover ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" width="300" height="300" loading="lazy" />
 							<span class="seyedcast-show-tile__play" aria-hidden="true"><span></span></span>
 						</span>
 						<span class="seyedcast-show-tile__title"><?php the_title(); ?></span>
@@ -38,10 +35,21 @@ ob_start();
 					</a>
 				<?php endwhile; ?>
 			<?php else : ?>
-				<p class="seyedcast-empty"><?php esc_html_e( 'هنوز شویی منتشر نشده است.', 'seyedcast' ); ?></p>
+				<p class="seyedcast-empty"><?php esc_html_e( 'هنوز پادکستی منتشر نشده است.', 'seyedcast' ); ?></p>
 			<?php endif; ?>
 		</div>
 	</section>
+
+	<?php Seyedcast_Templates::partial( 'suggested-for-you' ); ?>
+
+	<?php
+	Seyedcast_Templates::partial(
+		'comments',
+		array(
+			'seyedcast_comment_post_id' => Seyedcast_App::get_comments_board_id(),
+		)
+	);
+	?>
 </main>
 <?php
 Seyedcast_Templates::render_app(

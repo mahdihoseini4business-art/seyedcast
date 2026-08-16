@@ -77,6 +77,8 @@ ob_start();
 			</div>
 		<?php endif; ?>
 	</section>
+
+	<?php Seyedcast_Templates::partial( 'comments' ); ?>
 </main>
 <?php
 Seyedcast_Templates::render_app(

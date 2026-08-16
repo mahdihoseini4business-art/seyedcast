@@ -43,12 +43,14 @@ class Seyedcast_Settings {
 				'text'       => '',
 				'accent'     => '',
 			),
-			'featured_mode'     => 'auto',
-			'featured_show_id'  => 0,
-			'featured_cta'      => 'گوش دهید',
-			'sidebar_banners'   => array(),
-			'upcoming_events'   => array(),
-			'pwa_enabled'       => 1,
+			'featured_mode'        => 'auto',
+			'featured_show_id'     => 0,
+			'featured_cta'         => 'گوش دهید',
+			'sidebar_banners'      => array(),
+			'upcoming_events'      => array(),
+			'suggestions_enabled'  => 1,
+			'comments_enabled'     => 1,
+			'pwa_enabled'          => 1,
 			'pwa_prompt'        => 1,
 			'pwa_name'          => 'Seyedcast',
 			'pwa_short_name'    => 'Seyedcast',
@@ -255,6 +257,8 @@ class Seyedcast_Settings {
 			$out['featured_mode']    = in_array( $mode, array( 'auto', 'manual' ), true ) ? $mode : 'auto';
 			$out['featured_show_id'] = isset( $input['featured_show_id'] ) ? absint( $input['featured_show_id'] ) : 0;
 			$out['featured_cta']     = isset( $input['featured_cta'] ) ? sanitize_text_field( $input['featured_cta'] ) : $defaults['featured_cta'];
+			$out['suggestions_enabled'] = ! empty( $input['suggestions_enabled'] ) ? 1 : 0;
+			$out['comments_enabled']    = ! empty( $input['comments_enabled'] ) ? 1 : 0;
 
 			$out['sidebar_banners'] = array();
 			if ( ! empty( $input['sidebar_banners'] ) && is_array( $input['sidebar_banners'] ) ) {
@@ -296,11 +300,13 @@ class Seyedcast_Settings {
 				}
 			}
 		} else {
-			$out['featured_mode']    = $existing['featured_mode'];
-			$out['featured_show_id'] = (int) $existing['featured_show_id'];
-			$out['featured_cta']     = $existing['featured_cta'];
-			$out['sidebar_banners']  = $existing['sidebar_banners'];
-			$out['upcoming_events']  = $existing['upcoming_events'];
+			$out['featured_mode']       = $existing['featured_mode'];
+			$out['featured_show_id']    = (int) $existing['featured_show_id'];
+			$out['featured_cta']        = $existing['featured_cta'];
+			$out['sidebar_banners']     = $existing['sidebar_banners'];
+			$out['upcoming_events']     = $existing['upcoming_events'];
+			$out['suggestions_enabled'] = isset( $existing['suggestions_enabled'] ) ? (int) $existing['suggestions_enabled'] : 1;
+			$out['comments_enabled']    = isset( $existing['comments_enabled'] ) ? (int) $existing['comments_enabled'] : 1;
 		}
 
 		return $out;

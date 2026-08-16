@@ -14,8 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Seyedcast_App {
 
-	const VIEW_META = '_seyedcast_view_count';
-	const VIEW_COOKIE = 'seyedcast_viewed_';
+	const VIEW_META    = '_seyedcast_view_count';
+	const VIEW_COOKIE  = 'seyedcast_viewed_';
+	const BOARD_OPTION = 'seyedcast_comments_board_id';
 
 	/**
 	 * Constructor.
@@ -24,6 +25,10 @@ class Seyedcast_App {
 		add_action( 'template_redirect', array( $this, 'maybe_track_view' ), 20 );
 		add_action( 'wp_ajax_seyedcast_search', array( $this, 'ajax_search' ) );
 		add_action( 'wp_ajax_nopriv_seyedcast_search', array( $this, 'ajax_search' ) );
+		add_action( 'wp_ajax_seyedcast_suggest', array( $this, 'ajax_suggest' ) );
+		add_action( 'wp_ajax_nopriv_seyedcast_suggest', array( $this, 'ajax_suggest' ) );
+		add_filter( 'comment_post_redirect', array( $this, 'filter_comment_redirect' ), 10, 2 );
+		add_filter( 'comments_open', array( $this, 'filter_comments_open' ), 10, 2 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'dequeue_theme_chrome' ), 999 );
 	}
 
@@ -105,6 +110,15 @@ class Seyedcast_App {
 			return;
 		}
 
+		$board = (int) get_option( self::BOARD_OPTION, 0 );
+		if ( $board && is_page( $board ) ) {
+			$archive = get_post_type_archive_link( 'seyedcast_show' );
+			if ( $archive ) {
+				wp_safe_redirect( $archive . '#seyedcast-comments', 301 );
+				exit;
+			}
+		}
+
 		$show_id = 0;
 		if ( is_singular( 'seyedcast_show' ) ) {
 			$show_id = get_queried_object_id();
@@ -162,7 +176,16 @@ class Seyedcast_App {
 			return $shows[0];
 		}
 
-		$fallback = get_posts(
+		return self::get_newest_show();
+	}
+
+	/**
+	 * Newest published podcast show.
+	 *
+	 * @return WP_Post|null
+	 */
+	public static function get_newest_show() {
+		$shows = get_posts(
 			array(
 				'post_type'      => 'seyedcast_show',
 				'post_status'    => 'publish',
@@ -171,8 +194,36 @@ class Seyedcast_App {
 				'order'          => 'DESC',
 			)
 		);
+		return ! empty( $shows ) ? $shows[0] : null;
+	}
 
-		return ! empty( $fallback ) ? $fallback[0] : null;
+	/**
+	 * Banner slide payload for a show.
+	 *
+	 * @param WP_Post $show Show post.
+	 * @param string  $badge Badge label.
+	 * @param string  $key   Slide key.
+	 * @return array|null
+	 */
+	public static function banner_slide_from_show( $show, $badge, $key = '' ) {
+		if ( ! $show instanceof WP_Post ) {
+			return null;
+		}
+		$episodes = Seyedcast_Meta::get_show_episodes( $show->ID );
+		$first    = ! empty( $episodes ) ? Seyedcast_Templates::episode_payload( $episodes[0] ) : null;
+		$excerpt  = has_excerpt( $show ) ? get_the_excerpt( $show ) : wp_trim_words( wp_strip_all_tags( $show->post_content ), 28 );
+		return array(
+			'key'      => $key,
+			'badge'    => $badge,
+			'id'       => (int) $show->ID,
+			'title'    => get_the_title( $show ),
+			'url'      => get_permalink( $show ),
+			'cover'    => Seyedcast_Templates::cover_url( $show->ID ),
+			'excerpt'  => $excerpt,
+			'views'    => (int) get_post_meta( $show->ID, self::VIEW_META, true ),
+			'count'    => count( $episodes ),
+			'payload'  => $first,
+		);
 	}
 
 	/**
@@ -235,7 +286,7 @@ class Seyedcast_App {
 				'title' => get_the_title( $show ),
 				'url'   => get_permalink( $show ),
 				'cover' => Seyedcast_Templates::cover_url( $show->ID ),
-				'meta'  => __( 'شو', 'seyedcast' ),
+				'meta'  => __( 'پادکست', 'seyedcast' ),
 			);
 		}
 
@@ -259,5 +310,243 @@ class Seyedcast_App {
 		}
 
 		wp_send_json_success( array( 'items' => $items ) );
+	}
+
+	/**
+	 * Suggest related shows from recent listen history (show IDs).
+	 */
+	public function ajax_suggest() {
+		$raw = isset( $_GET['ids'] ) ? sanitize_text_field( wp_unslash( $_GET['ids'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$ids = array_values(
+			array_filter(
+				array_map( 'absint', explode( ',', $raw ) ),
+				static function ( $id ) {
+					return $id > 0;
+				}
+			)
+		);
+		$ids = array_slice( array_unique( $ids ), 0, 3 );
+
+		$items = self::get_suggested_shows( $ids, 5 );
+		wp_send_json_success( array( 'items' => $items ) );
+	}
+
+	/**
+	 * Build suggested show cards related to seed show IDs.
+	 *
+	 * @param int[] $seed_ids Recent show IDs.
+	 * @param int   $limit    Max items.
+	 * @return array
+	 */
+	public static function get_suggested_shows( array $seed_ids, $limit = 5 ) {
+		$limit   = max( 1, (int) $limit );
+		$exclude = $seed_ids;
+		$term_ids = array();
+
+		foreach ( $seed_ids as $show_id ) {
+			$terms = get_the_terms( $show_id, 'seyedcast_topic' );
+			if ( ! $terms || is_wp_error( $terms ) ) {
+				continue;
+			}
+			foreach ( $terms as $term ) {
+				$term_ids[] = (int) $term->term_id;
+			}
+		}
+		$term_ids = array_values( array_unique( array_filter( $term_ids ) ) );
+
+		$related = array();
+		if ( $term_ids ) {
+			$related = get_posts(
+				array(
+					'post_type'      => 'seyedcast_show',
+					'post_status'    => 'publish',
+					'posts_per_page' => $limit,
+					'post__not_in'   => $exclude ? $exclude : array( 0 ),
+					'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+						array(
+							'taxonomy' => 'seyedcast_topic',
+							'field'    => 'term_id',
+							'terms'    => $term_ids,
+						),
+					),
+					'meta_key'       => self::VIEW_META,
+					'orderby'        => 'meta_value_num',
+					'order'          => 'DESC',
+				)
+			);
+		}
+
+		if ( count( $related ) < $limit ) {
+			$found_ids = wp_list_pluck( $related, 'ID' );
+			$fallback  = get_posts(
+				array(
+					'post_type'      => 'seyedcast_show',
+					'post_status'    => 'publish',
+					'posts_per_page' => $limit - count( $related ),
+					'post__not_in'   => array_merge( $exclude, $found_ids, array( 0 ) ),
+					'meta_key'       => self::VIEW_META,
+					'orderby'        => 'meta_value_num date',
+					'order'          => 'DESC',
+				)
+			);
+			$related = array_merge( $related, $fallback );
+		}
+
+		$items = array();
+		foreach ( $related as $show ) {
+			$count   = count( Seyedcast_Meta::get_show_episodes( $show->ID ) );
+			$items[] = array(
+				'id'    => (int) $show->ID,
+				'title' => get_the_title( $show ),
+				'url'   => get_permalink( $show ),
+				'cover' => Seyedcast_Templates::cover_url( $show->ID ),
+				'meta'  => sprintf( _n( '%s اپیزود', '%s اپیزود', $count, 'seyedcast' ), number_format_i18n( $count ) ),
+			);
+		}
+		return $items;
+	}
+
+	/**
+	 * Page ID used for homepage / archive comments board.
+	 *
+	 * @return int
+	 */
+	public static function get_comments_board_id() {
+		$settings = Seyedcast_Settings::get();
+		if ( empty( $settings['comments_enabled'] ) ) {
+			return 0;
+		}
+
+		$id = (int) get_option( self::BOARD_OPTION, 0 );
+		if ( $id ) {
+			$post = get_post( $id );
+			if ( $post && 'trash' !== $post->post_status ) {
+				if ( 'closed' === $post->comment_status ) {
+					wp_update_post(
+						array(
+							'ID'             => $id,
+							'comment_status' => 'open',
+						)
+					);
+				}
+				return $id;
+			}
+		}
+
+		$page_id = wp_insert_post(
+			array(
+				'post_type'      => 'page',
+				'post_status'    => 'publish',
+				'post_title'     => __( 'گفتگوی پادکست‌ها', 'seyedcast' ),
+				'post_content'   => __( 'نظرات عمومی صفحه اصلی پادکست‌ها.', 'seyedcast' ),
+				'post_name'      => 'seyedcast-comments-board',
+				'comment_status' => 'open',
+				'ping_status'    => 'closed',
+			),
+			true
+		);
+
+		if ( is_wp_error( $page_id ) || ! $page_id ) {
+			return 0;
+		}
+
+		update_post_meta( (int) $page_id, '_seyedcast_comments_board', 1 );
+		update_option( self::BOARD_OPTION, (int) $page_id, false );
+		return (int) $page_id;
+	}
+
+	/**
+	 * Force comments open/closed for podcast surfaces based on settings.
+	 *
+	 * @param bool $open    Whether open.
+	 * @param int  $post_id Post ID.
+	 * @return bool
+	 */
+	public function filter_comments_open( $open, $post_id ) {
+		$settings = Seyedcast_Settings::get();
+		$type     = get_post_type( $post_id );
+		$board    = (int) get_option( self::BOARD_OPTION, 0 );
+		$is_ours  = in_array( $type, array( 'seyedcast_show', 'seyedcast_episode' ), true ) || ( $board && (int) $post_id === $board );
+
+		if ( ! $is_ours ) {
+			return $open;
+		}
+
+		return ! empty( $settings['comments_enabled'] );
+	}
+
+	/**
+	 * Keep comment submitters inside the podcast app after posting.
+	 *
+	 * @param string     $location Redirect URL.
+	 * @param WP_Comment $comment  Comment.
+	 * @return string
+	 */
+	public function filter_comment_redirect( $location, $comment ) {
+		if ( ! $comment instanceof WP_Comment ) {
+			return $location;
+		}
+
+		$post_id = (int) $comment->comment_post_ID;
+		$board   = (int) get_option( self::BOARD_OPTION, 0 );
+
+		if ( $board && $post_id === $board ) {
+			$archive = get_post_type_archive_link( 'seyedcast_show' );
+			if ( $archive ) {
+				return add_query_arg( 'comment', $comment->comment_ID, $archive ) . '#seyedcast-comments';
+			}
+		}
+
+		if ( in_array( get_post_type( $post_id ), array( 'seyedcast_show', 'seyedcast_episode' ), true ) ) {
+			$permalink = get_permalink( $post_id );
+			if ( $permalink ) {
+				return add_query_arg( 'comment', $comment->comment_ID, $permalink ) . '#seyedcast-comments';
+			}
+		}
+
+		return $location;
+	}
+
+	/**
+	 * Custom comment list item markup.
+	 *
+	 * @param WP_Comment $comment Comment.
+	 * @param array      $args    Args.
+	 * @param int        $depth   Depth.
+	 */
+	public static function render_comment( $comment, $args, $depth ) {
+		$tag = ( 'div' === $args['style'] ) ? 'div' : 'li';
+		?>
+		<<?php echo esc_html( $tag ); ?> id="comment-<?php comment_ID(); ?>" <?php comment_class( 'seyedcast-comment', $comment ); ?>>
+			<article class="seyedcast-comment__inner">
+				<div class="seyedcast-comment__avatar">
+					<?php echo get_avatar( $comment, (int) $args['avatar_size'] ); ?>
+				</div>
+				<div class="seyedcast-comment__body">
+					<header class="seyedcast-comment__meta">
+						<strong class="seyedcast-comment__author"><?php comment_author( $comment ); ?></strong>
+						<time class="seyedcast-comment__date" datetime="<?php echo esc_attr( get_comment_date( DATE_W3C, $comment ) ); ?>">
+							<?php echo esc_html( get_comment_date( '', $comment ) ); ?>
+						</time>
+					</header>
+					<div class="seyedcast-comment__content">
+						<?php comment_text( $comment ); ?>
+					</div>
+					<?php
+					comment_reply_link(
+						array_merge(
+							$args,
+							array(
+								'depth'     => $depth,
+								'max_depth' => $args['max_depth'],
+								'before'    => '<div class="seyedcast-comment__reply">',
+								'after'     => '</div>',
+							)
+						)
+					);
+					?>
+				</div>
+			</article>
+		<?php
 	}
 }

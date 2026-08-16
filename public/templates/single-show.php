@@ -102,9 +102,11 @@ ob_start();
 				<?php endforeach; ?>
 			</ul>
 		<?php else : ?>
-			<p class="seyedcast-empty"><?php esc_html_e( 'هنوز اپیزودی برای این شو منتشر نشده.', 'seyedcast' ); ?></p>
+			<p class="seyedcast-empty"><?php esc_html_e( 'هنوز اپیزودی برای این پادکست منتشر نشده.', 'seyedcast' ); ?></p>
 		<?php endif; ?>
 	</section>
+
+	<?php Seyedcast_Templates::partial( 'comments' ); ?>
 </main>
 <?php
 Seyedcast_Templates::render_app(

@@ -19,6 +19,14 @@ class Seyedcast_Post_Types {
 	 */
 	public function __construct() {
 		add_action( 'init', array( __CLASS__, 'register' ) );
+		add_action( 'after_setup_theme', array( __CLASS__, 'register_image_sizes' ), 20 );
+	}
+
+	/**
+	 * Square cover crop size.
+	 */
+	public static function register_image_sizes() {
+		add_image_size( 'seyedcast_cover', 600, 600, true );
 	}
 
 	/**
@@ -32,17 +40,17 @@ class Seyedcast_Post_Types {
 			'seyedcast_show',
 			array(
 				'labels'              => array(
-					'name'               => __( 'شوهای پادکست', 'seyedcast' ),
-					'singular_name'      => __( 'شو', 'seyedcast' ),
-					'add_new'            => __( 'افزودن شو', 'seyedcast' ),
-					'add_new_item'       => __( 'افزودن شو جدید', 'seyedcast' ),
-					'edit_item'          => __( 'ویرایش شو', 'seyedcast' ),
-					'new_item'           => __( 'شو جدید', 'seyedcast' ),
-					'view_item'          => __( 'مشاهده شو', 'seyedcast' ),
-					'search_items'       => __( 'جستجوی شو', 'seyedcast' ),
-					'not_found'          => __( 'شویی یافت نشد', 'seyedcast' ),
-					'not_found_in_trash' => __( 'در زباله‌دان شویی نیست', 'seyedcast' ),
-					'menu_name'          => __( 'شوها', 'seyedcast' ),
+					'name'               => __( 'پادکست‌ها', 'seyedcast' ),
+					'singular_name'      => __( 'پادکست', 'seyedcast' ),
+					'add_new'            => __( 'افزودن پادکست', 'seyedcast' ),
+					'add_new_item'       => __( 'افزودن پادکست جدید', 'seyedcast' ),
+					'edit_item'          => __( 'ویرایش پادکست', 'seyedcast' ),
+					'new_item'           => __( 'پادکست جدید', 'seyedcast' ),
+					'view_item'          => __( 'مشاهده پادکست', 'seyedcast' ),
+					'search_items'       => __( 'جستجوی پادکست', 'seyedcast' ),
+					'not_found'          => __( 'پادکستی یافت نشد', 'seyedcast' ),
+					'not_found_in_trash' => __( 'در زباله‌دان پادکستی نیست', 'seyedcast' ),
+					'menu_name'          => __( 'پادکست‌ها', 'seyedcast' ),
 				),
 				'public'              => true,
 				'has_archive'         => $base,
@@ -51,7 +59,7 @@ class Seyedcast_Post_Types {
 					'with_front' => false,
 				),
 				'menu_icon'           => 'dashicons-microphone',
-				'supports'            => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
+				'supports'            => array( 'title', 'editor', 'thumbnail', 'excerpt', 'comments' ),
 				'show_in_rest'        => true,
 				'exclude_from_search' => false,
 				'publicly_queryable'  => true,
@@ -79,7 +87,7 @@ class Seyedcast_Post_Types {
 				'has_archive'         => false,
 				'rewrite'             => false,
 				'menu_icon'           => 'dashicons-playlist-audio',
-				'supports'            => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
+				'supports'            => array( 'title', 'editor', 'thumbnail', 'excerpt', 'comments' ),
 				'show_in_rest'        => true,
 				'exclude_from_search' => false,
 				'publicly_queryable'  => true,

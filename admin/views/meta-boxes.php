@@ -19,9 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 ?>
 <div class="seyedcast-meta-grid">
 	<p>
-		<label for="seyedcast_show_id"><strong><?php esc_html_e( 'شو / سری', 'seyedcast' ); ?></strong></label><br />
+		<label for="seyedcast_show_id"><strong><?php esc_html_e( 'پادکست / سری', 'seyedcast' ); ?></strong></label><br />
 		<select name="seyedcast_show_id" id="seyedcast_show_id" class="widefat">
-			<option value="0"><?php esc_html_e( '— انتخاب شو —', 'seyedcast' ); ?></option>
+			<option value="0"><?php esc_html_e( '— انتخاب پادکست —', 'seyedcast' ); ?></option>
 			<?php foreach ( $shows as $show ) : ?>
 				<option value="<?php echo esc_attr( $show->ID ); ?>" <?php selected( $show_id, $show->ID ); ?>>
 					<?php echo esc_html( $show->post_title ); ?>
@@ -53,5 +53,5 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<button type="button" class="button" id="seyedcast_select_audio"><?php esc_html_e( 'انتخاب از کتابخانه رسانه', 'seyedcast' ); ?></button>
 		<button type="button" class="button" id="seyedcast_remove_audio" <?php disabled( ! $audio_id ); ?>><?php esc_html_e( 'حذف', 'seyedcast' ); ?></button>
 	</p>
-	<p class="description"><?php esc_html_e( 'تصویر شاخص به‌عنوان کاور اپیزود استفاده می‌شود. اگر نباشد، کاور شو نمایش داده می‌شود.', 'seyedcast' ); ?></p>
+	<p class="description"><?php esc_html_e( 'تصویر شاخص به‌عنوان کاور اپیزود استفاده می‌شود. اگر نباشد، کاور پادکست نمایش داده می‌شود.', 'seyedcast' ); ?></p>
 </div>

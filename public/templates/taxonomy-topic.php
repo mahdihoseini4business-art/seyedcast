@@ -20,7 +20,7 @@ ob_start();
 			<?php if ( $term && ! empty( $term->description ) ) : ?>
 				<span class="seyedcast-section-head__hint"><?php echo esc_html( $term->description ); ?></span>
 			<?php else : ?>
-				<span class="seyedcast-section-head__hint"><?php esc_html_e( 'شوها و اپیزودهای این موضوع', 'seyedcast' ); ?></span>
+				<span class="seyedcast-section-head__hint"><?php esc_html_e( 'پادکست‌ها و اپیزودهای این موضوع', 'seyedcast' ); ?></span>
 			<?php endif; ?>
 		</div>
 

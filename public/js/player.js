@@ -3,6 +3,7 @@
 
 	var cfg = window.seyedcastPlayer || {};
 	var storageKey = cfg.storageKey || 'seyedcast_player_state_v1';
+	var historyKey = cfg.historyKey || 'seyedcast_listen_history_v1';
 	var root = document.getElementById('seyedcast-sticky-player');
 	var audio = document.getElementById('seyedcast-audio');
 	if (!root || !audio) {
@@ -30,6 +31,7 @@
 
 	var state = {
 		id: 0,
+		show_id: 0,
 		title: '',
 		show: '',
 		audio: '',
@@ -59,6 +61,7 @@
 				storageKey,
 				JSON.stringify({
 					id: state.id,
+					show_id: state.show_id || 0,
 					title: state.title,
 					show: state.show,
 					audio: state.audio,
@@ -67,6 +70,36 @@
 					position: audio.currentTime || state.position || 0,
 					rate: audio.playbackRate || state.rate || 1,
 					playing: !audio.paused
+				})
+			);
+		} catch (e) {
+			/* ignore */
+		}
+	}
+
+	function pushListenHistory(showId) {
+		showId = parseInt(showId, 10) || 0;
+		if (!showId) {
+			return;
+		}
+		try {
+			var list = [];
+			var raw = localStorage.getItem(historyKey);
+			if (raw) {
+				list = JSON.parse(raw);
+			}
+			if (!Array.isArray(list)) {
+				list = [];
+			}
+			list = list.filter(function (id) {
+				return parseInt(id, 10) !== showId;
+			});
+			list.unshift(showId);
+			list = list.slice(0, 3);
+			localStorage.setItem(historyKey, JSON.stringify(list));
+			document.dispatchEvent(
+				new CustomEvent('seyedcast:history', {
+					detail: { ids: list }
 				})
 			);
 		} catch (e) {
@@ -263,6 +296,7 @@
 		var same = state.audio === payload.audio && state.id === payload.id;
 		var resumeAt = typeof payload.position === 'number' ? payload.position : null;
 		state.id = payload.id || 0;
+		state.show_id = payload.show_id || 0;
 		state.title = payload.title || '';
 		state.show = payload.show || '';
 		state.cover = payload.cover || '';
@@ -275,6 +309,7 @@
 		renderMeta();
 		showPlayer();
 		markActiveEpisode(!audio.paused);
+		pushListenHistory(state.show_id);
 
 		if (!same) {
 			audio.src = payload.audio;

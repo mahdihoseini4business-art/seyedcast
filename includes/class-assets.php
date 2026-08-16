@@ -99,14 +99,18 @@ class Seyedcast_Assets {
 				'seyedcast-app-ui',
 				'seyedcastApp',
 				array(
-					'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
-					'storageKey' => 'seyedcast_player_state_v1',
-					'i18n'       => array(
+					'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+					'storageKey'  => 'seyedcast_player_state_v1',
+					'historyKey'  => 'seyedcast_listen_history_v1',
+					'i18n'        => array(
 						'noResults' => __( 'نتیجه‌ای پیدا نشد', 'seyedcast' ),
 						'from'      => __( 'از', 'seyedcast' ),
 					),
 				)
 			);
+			if ( ! empty( Seyedcast_Settings::get()['comments_enabled'] ) && self::is_seyedcast_context() ) {
+				wp_enqueue_script( 'comment-reply' );
+			}
 		}
 
 		wp_localize_script(
@@ -114,6 +118,7 @@ class Seyedcast_Assets {
 			'seyedcastPlayer',
 			array(
 				'storageKey' => 'seyedcast_player_state_v1',
+				'historyKey' => 'seyedcast_listen_history_v1',
 				'i18n'       => array(
 					'play'    => __( 'پخش', 'seyedcast' ),
 					'pause'   => __( 'توقف', 'seyedcast' ),

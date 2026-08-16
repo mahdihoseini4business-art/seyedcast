@@ -24,7 +24,7 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 
 		<nav class="seyedcast-app-header__nav" aria-label="<?php esc_attr_e( 'منوی پادکست', 'seyedcast' ); ?>">
 			<a class="seyedcast-app-header__link<?php echo is_post_type_archive( 'seyedcast_show' ) ? ' is-active' : ''; ?>" href="<?php echo esc_url( $archive ? $archive : '#' ); ?>" data-seyedcast-nav>
-				<?php esc_html_e( 'همه شوها', 'seyedcast' ); ?>
+				<?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?>
 			</a>
 		</nav>
 
@@ -34,7 +34,7 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 				type="search"
 				id="seyedcast-search-input"
 				class="seyedcast-app-search__input"
-				placeholder="<?php esc_attr_e( 'جستجوی شو یا اپیزود…', 'seyedcast' ); ?>"
+				placeholder="<?php esc_attr_e( 'جستجوی پادکست یا اپیزود…', 'seyedcast' ); ?>"
 				autocomplete="off"
 				enterkeyhint="search"
 			/>
