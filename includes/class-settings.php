@@ -35,6 +35,7 @@ class Seyedcast_Settings {
 		return array(
 			'base_slug'         => 'podcasts',
 			'archive_title'     => 'پادکست‌های آموزشی',
+			'header_logo'       => 0,
 			'design_preset'     => 'spotify',
 			'colors'            => array(
 				'primary'    => '',
@@ -211,6 +212,7 @@ class Seyedcast_Settings {
 			$out['base_slug'] = 'podcasts';
 		}
 		$out['archive_title'] = isset( $input['archive_title'] ) ? sanitize_text_field( $input['archive_title'] ) : $existing['archive_title'];
+		$out['header_logo']   = isset( $input['header_logo'] ) ? absint( $input['header_logo'] ) : (int) $existing['header_logo'];
 		$preset               = isset( $input['design_preset'] ) ? sanitize_key( $input['design_preset'] ) : $existing['design_preset'];
 		$out['design_preset'] = in_array( $preset, $presets, true ) ? $preset : 'spotify';
 

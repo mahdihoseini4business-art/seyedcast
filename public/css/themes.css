@@ -932,6 +932,14 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	-webkit-text-fill-color: transparent;
 }
 
+.seyedcast-app-header__logo-img {
+	display: block;
+	height: 32px;
+	width: auto;
+	max-width: 160px;
+	object-fit: contain;
+}
+
 .seyedcast-app-header__tag {
 	font-size: 0.72rem;
 	color: var(--sc-muted);

@@ -16,8 +16,9 @@ if ( ! in_array( $tab, array( 'general', 'design', 'page', 'pwa' ), true ) ) {
 	$tab = 'general';
 }
 
-$icon_192_url = ! empty( $settings['pwa_icon_192'] ) ? wp_get_attachment_image_url( (int) $settings['pwa_icon_192'], 'thumbnail' ) : '';
-$icon_512_url = ! empty( $settings['pwa_icon_512'] ) ? wp_get_attachment_image_url( (int) $settings['pwa_icon_512'], 'thumbnail' ) : '';
+$icon_192_url   = ! empty( $settings['pwa_icon_192'] ) ? wp_get_attachment_image_url( (int) $settings['pwa_icon_192'], 'thumbnail' ) : '';
+$icon_512_url   = ! empty( $settings['pwa_icon_512'] ) ? wp_get_attachment_image_url( (int) $settings['pwa_icon_512'], 'thumbnail' ) : '';
+$header_logo_url = ! empty( $settings['header_logo'] ) ? wp_get_attachment_image_url( (int) $settings['header_logo'], 'medium' ) : '';
 
 $shows = get_posts(
 	array(
@@ -84,6 +85,22 @@ while ( count( $events ) < 3 ) {
 					<th scope="row"><label for="seyedcast_archive_title"><?php esc_html_e( 'عنوان صفحه آرشیو', 'seyedcast' ); ?></label></th>
 					<td>
 						<input type="text" class="regular-text" id="seyedcast_archive_title" name="seyedcast_settings[archive_title]" value="<?php echo esc_attr( $settings['archive_title'] ); ?>" />
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'لوگو هدر', 'seyedcast' ); ?></th>
+					<td>
+						<input type="hidden" id="seyedcast_header_logo" name="seyedcast_settings[header_logo]" value="<?php echo esc_attr( (string) (int) $settings['header_logo'] ); ?>" />
+						<div id="seyedcast_header_logo_preview" class="seyedcast-icon-preview">
+							<?php if ( $header_logo_url ) : ?>
+								<img src="<?php echo esc_url( $header_logo_url ); ?>" alt="" />
+							<?php endif; ?>
+						</div>
+						<p>
+							<button type="button" class="button seyedcast-select-icon" data-target="seyedcast_header_logo"><?php esc_html_e( 'بارگذاری لوگو', 'seyedcast' ); ?></button>
+							<button type="button" class="button seyedcast-clear-icon" data-target="seyedcast_header_logo"><?php esc_html_e( 'حذف', 'seyedcast' ); ?></button>
+						</p>
+						<p class="description"><?php esc_html_e( 'در صورت خالی بودن، نام متنی «Seyedcast» نمایش داده می‌شود.', 'seyedcast' ); ?></p>
 					</td>
 				</tr>
 			</table>

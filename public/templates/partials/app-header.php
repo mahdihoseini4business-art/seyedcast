@@ -18,7 +18,15 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 <header class="seyedcast-app-header" role="banner">
 	<div class="seyedcast-app-header__inner">
 		<a class="seyedcast-app-header__brand" href="<?php echo esc_url( $archive ? $archive : home_url( '/' ) ); ?>" data-seyedcast-nav>
-			<span class="seyedcast-app-header__logo">Seyedcast</span>
+			<?php
+			$logo_id  = ! empty( $settings['header_logo'] ) ? (int) $settings['header_logo'] : 0;
+			$logo_url = $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '';
+			if ( $logo_url ) :
+				?>
+				<img class="seyedcast-app-header__logo-img" src="<?php echo esc_url( $logo_url ); ?>" alt="<?php echo esc_attr( $title ); ?>" />
+			<?php else : ?>
+				<span class="seyedcast-app-header__logo">Seyedcast</span>
+			<?php endif; ?>
 			<span class="seyedcast-app-header__tag"><?php echo esc_html( $title ); ?></span>
 		</a>
 
