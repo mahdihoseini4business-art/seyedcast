@@ -19,13 +19,14 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 	<div class="seyedcast-app-header__inner">
 		<a class="seyedcast-app-header__brand" href="<?php echo esc_url( $archive ? $archive : home_url( '/' ) ); ?>" data-seyedcast-nav>
 			<?php
-			$logo_id  = ! empty( $settings['header_logo'] ) ? (int) $settings['header_logo'] : 0;
-			$logo_url = $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '';
+			$logo_id    = ! empty( $settings['header_logo'] ) ? (int) $settings['header_logo'] : 0;
+			$logo_url   = $logo_id ? wp_get_attachment_image_url( $logo_id, 'medium' ) : '';
+			$brand_text = ! empty( $settings['header_brand_text'] ) ? $settings['header_brand_text'] : 'MahdiHoseiny.ir';
 			if ( $logo_url ) :
 				?>
-				<img class="seyedcast-app-header__logo-img" src="<?php echo esc_url( $logo_url ); ?>" alt="<?php echo esc_attr( $title ); ?>" />
+				<img class="seyedcast-app-header__logo-img" src="<?php echo esc_url( $logo_url ); ?>" alt="<?php echo esc_attr( $brand_text ); ?>" />
 			<?php else : ?>
-				<span class="seyedcast-app-header__logo">Seyedcast</span>
+				<span class="seyedcast-app-header__logo"><?php echo esc_html( $brand_text ); ?></span>
 			<?php endif; ?>
 			<span class="seyedcast-app-header__tag"><?php echo esc_html( $title ); ?></span>
 		</a>

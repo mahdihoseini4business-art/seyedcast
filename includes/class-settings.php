@@ -36,6 +36,7 @@ class Seyedcast_Settings {
 			'base_slug'         => 'podcasts',
 			'archive_title'     => 'پادکست‌های آموزشی',
 			'header_logo'       => 0,
+			'header_brand_text' => 'MahdiHoseiny.ir',
 			'design_preset'     => 'spotify',
 			'colors'            => array(
 				'primary'    => '',
@@ -212,7 +213,14 @@ class Seyedcast_Settings {
 			$out['base_slug'] = 'podcasts';
 		}
 		$out['archive_title'] = isset( $input['archive_title'] ) ? sanitize_text_field( $input['archive_title'] ) : $existing['archive_title'];
-		$out['header_logo']   = isset( $input['header_logo'] ) ? absint( $input['header_logo'] ) : (int) $existing['header_logo'];
+		$out['header_logo'] = isset( $input['header_logo'] ) ? absint( $input['header_logo'] ) : (int) $existing['header_logo'];
+		if ( isset( $input['header_brand_text'] ) ) {
+			$brand_text = sanitize_text_field( $input['header_brand_text'] );
+			$out['header_brand_text'] = '' !== $brand_text ? $brand_text : $defaults['header_brand_text'];
+		} else {
+			$existing_brand = isset( $existing['header_brand_text'] ) ? sanitize_text_field( (string) $existing['header_brand_text'] ) : '';
+			$out['header_brand_text'] = '' !== $existing_brand ? $existing_brand : $defaults['header_brand_text'];
+		}
 		$preset               = isset( $input['design_preset'] ) ? sanitize_key( $input['design_preset'] ) : $existing['design_preset'];
 		$out['design_preset'] = in_array( $preset, $presets, true ) ? $preset : 'spotify';
 

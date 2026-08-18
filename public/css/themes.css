@@ -923,9 +923,10 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 }
 
 .seyedcast-app-header__logo {
-	font-size: 1.15rem;
+	font-size: 1.05rem;
 	font-weight: 800;
-	letter-spacing: 0.02em;
+	letter-spacing: 0.01em;
+	white-space: nowrap;
 	background: linear-gradient(120deg, var(--sc-text) 20%, var(--sc-primary) 95%);
 	-webkit-background-clip: text;
 	background-clip: text;

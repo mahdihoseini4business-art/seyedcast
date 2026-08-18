@@ -100,7 +100,21 @@ while ( count( $events ) < 3 ) {
 							<button type="button" class="button seyedcast-select-icon" data-target="seyedcast_header_logo"><?php esc_html_e( 'بارگذاری لوگو', 'seyedcast' ); ?></button>
 							<button type="button" class="button seyedcast-clear-icon" data-target="seyedcast_header_logo"><?php esc_html_e( 'حذف', 'seyedcast' ); ?></button>
 						</p>
-						<p class="description"><?php esc_html_e( 'در صورت خالی بودن، نام متنی «Seyedcast» نمایش داده می‌شود.', 'seyedcast' ); ?></p>
+						<p class="description"><?php esc_html_e( 'اگر لوگو نباشد، متن برند در هدر نمایش داده می‌شود.', 'seyedcast' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="seyedcast_header_brand_text"><?php esc_html_e( 'متن برند هدر', 'seyedcast' ); ?></label></th>
+					<td>
+						<input
+							type="text"
+							class="regular-text"
+							id="seyedcast_header_brand_text"
+							name="seyedcast_settings[header_brand_text]"
+							value="<?php echo esc_attr( $settings['header_brand_text'] ); ?>"
+							placeholder="MahdiHoseiny.ir"
+						/>
+						<p class="description"><?php esc_html_e( 'پیش‌فرض: MahdiHoseiny.ir — فقط وقتی لوگویی بارگذاری نشده باشد در هدر دیده می‌شود.', 'seyedcast' ); ?></p>
 					</td>
 				</tr>
 			</table>
