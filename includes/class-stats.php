@@ -426,12 +426,15 @@ class Seyedcast_Stats {
 		$end   = current_time( 'Y-m-d' );
 		$start = wp_date( 'Y-m-d', current_time( 'timestamp' ) - ( ( $days - 1 ) * DAY_IN_SECONDS ) );
 
-		$labels = array();
-		$map    = array();
+		$labels           = array();
+		$formatted_labels = array();
+		$map              = array();
 		for ( $i = 0; $i < $days; $i++ ) {
-			$day         = wp_date( 'Y-m-d', current_time( 'timestamp' ) - ( ( $days - 1 - $i ) * DAY_IN_SECONDS ) );
-			$labels[]    = $day;
-			$map[ $day ] = 0;
+			$timestamp          = (int) current_time( 'timestamp' ) - ( ( $days - 1 - $i ) * DAY_IN_SECONDS );
+			$day                = wp_date( 'Y-m-d', $timestamp );
+			$labels[]           = $day;
+			$formatted_labels[] = wp_date( 'Y/m/d', $timestamp );
+			$map[ $day ]        = 0;
 		}
 
 		if ( $episode_id > 0 ) {
@@ -494,13 +497,6 @@ class Seyedcast_Stats {
 			$values[] = $val;
 			$total   += $val;
 		}
-
-		$formatted_labels = array_map(
-			static function ( $date ) {
-				return mysql2date( 'Y/m/d', $date, false );
-			},
-			$labels
-		);
 
 		return array(
 			'labels' => $formatted_labels,
