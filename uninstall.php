@@ -44,6 +44,8 @@ foreach ( $episode_ids as $id ) {
 	delete_post_meta( $id, '_seyedcast_audio_id' );
 	delete_post_meta( $id, '_seyedcast_duration' );
 	delete_post_meta( $id, '_seyedcast_episode_number' );
+	delete_post_meta( $id, '_seyedcast_view_count' );
+	delete_post_meta( $id, '_seyedcast_total_view_count' );
 }
 
 flush_rewrite_rules();

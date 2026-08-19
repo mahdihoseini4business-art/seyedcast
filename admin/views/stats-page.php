@@ -14,39 +14,55 @@ if ( ! defined( 'ABSPATH' ) ) {
 $default_mode = Seyedcast_Stats::view_mode();
 ?>
 <div class="wrap seyedcast-settings seyedcast-stats" dir="rtl">
-	<h1><?php esc_html_e( 'آمار بازدید پادکست‌ها', 'seyedcast' ); ?></h1>
+	<h1><?php esc_html_e( 'آمار بازدید', 'seyedcast' ); ?></h1>
 
 	<div class="seyedcast-stats__cards">
 		<div class="seyedcast-stats-card">
-			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'بازدید یکتا (کل)', 'seyedcast' ); ?></span>
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'بازدید یکتای پادکست‌ها', 'seyedcast' ); ?></span>
 			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['unique'] ) ); ?></strong>
 		</div>
 		<div class="seyedcast-stats-card">
-			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'کل بازدیدها', 'seyedcast' ); ?></span>
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'کل بازدید پادکست‌ها', 'seyedcast' ); ?></span>
 			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['total'] ) ); ?></strong>
 		</div>
 		<div class="seyedcast-stats-card">
-			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'بازدید یکتای امروز', 'seyedcast' ); ?></span>
-			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['today_unique'] ) ); ?></strong>
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'بازدید یکتای اپیزودها', 'seyedcast' ); ?></span>
+			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['ep_unique'] ) ); ?></strong>
 		</div>
 		<div class="seyedcast-stats-card">
-			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'کل بازدید امروز', 'seyedcast' ); ?></span>
-			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['today_total'] ) ); ?></strong>
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'کل بازدید اپیزودها', 'seyedcast' ); ?></span>
+			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['ep_total'] ) ); ?></strong>
 		</div>
 	</div>
 
 	<div class="seyedcast-admin-card seyedcast-stats__filters">
 		<strong><?php esc_html_e( 'فیلتر نمودار', 'seyedcast' ); ?></strong>
 		<div class="seyedcast-stats__filter-row">
-			<label for="seyedcast_stats_show">
+			<label for="seyedcast_stats_scope">
+				<?php esc_html_e( 'نوع محتوا', 'seyedcast' ); ?>
+				<select id="seyedcast_stats_scope">
+					<option value="all_shows"><?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?></option>
+					<option value="show"><?php esc_html_e( 'یک پادکست', 'seyedcast' ); ?></option>
+					<option value="episode"><?php esc_html_e( 'یک اپیزود', 'seyedcast' ); ?></option>
+				</select>
+			</label>
+
+			<label for="seyedcast_stats_show" id="seyedcast_stats_show_wrap" hidden>
 				<?php esc_html_e( 'پادکست', 'seyedcast' ); ?>
 				<select id="seyedcast_stats_show">
-					<option value="0"><?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?></option>
+					<option value="0"><?php esc_html_e( '— انتخاب پادکست —', 'seyedcast' ); ?></option>
 					<?php foreach ( $shows as $show ) : ?>
 						<option value="<?php echo esc_attr( (string) $show->ID ); ?>">
 							<?php echo esc_html( get_the_title( $show ) ); ?>
 						</option>
 					<?php endforeach; ?>
+				</select>
+			</label>
+
+			<label for="seyedcast_stats_episode" id="seyedcast_stats_episode_wrap" hidden>
+				<?php esc_html_e( 'اپیزود', 'seyedcast' ); ?>
+				<select id="seyedcast_stats_episode" disabled>
+					<option value="0"><?php esc_html_e( '— ابتدا پادکست را انتخاب کنید —', 'seyedcast' ); ?></option>
 				</select>
 			</label>
 
@@ -71,7 +87,7 @@ $default_mode = Seyedcast_Stats::view_mode();
 
 	<div class="seyedcast-admin-card seyedcast-stats__chart-wrap">
 		<div class="seyedcast-stats__chart-head">
-			<strong><?php esc_html_e( 'نمودار بازدید روزانه', 'seyedcast' ); ?></strong>
+			<strong id="seyedcast_stats_chart_title"><?php esc_html_e( 'نمودار بازدید روزانه', 'seyedcast' ); ?></strong>
 			<span id="seyedcast_stats_period_total" class="seyedcast-stats__period-total"></span>
 		</div>
 		<p id="seyedcast_stats_status" class="seyedcast-stats__status" hidden></p>

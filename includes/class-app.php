@@ -14,8 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Seyedcast_App {
 
-	const VIEW_META    = '_seyedcast_view_count';
-	const VIEW_COOKIE  = 'seyedcast_viewed_';
+	const VIEW_META           = '_seyedcast_view_count';
+	const VIEW_COOKIE         = 'seyedcast_viewed_';
+	const EPISODE_VIEW_COOKIE = 'seyedcast_viewed_ep_';
 	const BOARD_OPTION = 'seyedcast_comments_board_id';
 
 	/**
@@ -106,7 +107,7 @@ class Seyedcast_App {
 	 * Increment show view count (throttled per visitor).
 	 */
 	public function maybe_track_view() {
-		if ( is_admin() || wp_doing_ajax() || self::is_partial_request() ) {
+		if ( is_admin() || wp_doing_ajax() ) {
 			return;
 		}
 
@@ -119,25 +120,34 @@ class Seyedcast_App {
 			}
 		}
 
-		$show_id = 0;
+		$show_id    = 0;
+		$episode_id = 0;
+
 		if ( is_singular( 'seyedcast_show' ) ) {
 			$show_id = get_queried_object_id();
 		} elseif ( is_singular( 'seyedcast_episode' ) ) {
-			$show_id = Seyedcast_Meta::get_show_id( get_queried_object_id() );
+			$episode_id = get_queried_object_id();
+			$show_id    = Seyedcast_Meta::get_show_id( $episode_id );
 		}
 
-		if ( $show_id < 1 ) {
-			return;
+		if ( $show_id > 0 ) {
+			$cookie_show    = self::VIEW_COOKIE . $show_id;
+			$is_unique_show = ! isset( $_COOKIE[ $cookie_show ] );
+			Seyedcast_Stats::record_show_view( $show_id, $is_unique_show );
+
+			if ( $is_unique_show ) {
+				setcookie( $cookie_show, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+			}
 		}
 
-		$cookie    = self::VIEW_COOKIE . $show_id;
-		$is_unique = ! isset( $_COOKIE[ $cookie ] );
+		if ( $episode_id > 0 ) {
+			$cookie_ep    = self::EPISODE_VIEW_COOKIE . $episode_id;
+			$is_unique_ep = ! isset( $_COOKIE[ $cookie_ep ] );
+			Seyedcast_Stats::record_episode_view( $episode_id, $is_unique_ep );
 
-		Seyedcast_Stats::record_view( $show_id, $is_unique );
-
-		if ( $is_unique ) {
-			// 6 hours throttle for unique views.
-			setcookie( $cookie, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+			if ( $is_unique_ep ) {
+				setcookie( $cookie_ep, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+			}
 		}
 	}
 

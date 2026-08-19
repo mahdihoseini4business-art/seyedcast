@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Seyedcast_Stats {
 
-	const TABLE_VERSION = '1';
+	const TABLE_VERSION = '2';
 	const TABLE_OPTION  = 'seyedcast_stats_db_version';
 	const TOTAL_META    = '_seyedcast_total_view_count';
 
@@ -23,7 +23,7 @@ class Seyedcast_Stats {
 	 */
 	public function __construct() {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
-		add_action( 'admin_init', array( $this, 'maybe_create_table' ) );
+		add_action( 'init', array( $this, 'maybe_create_table' ), 5 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'wp_ajax_seyedcast_stats_chart', array( $this, 'ajax_chart' ) );
 	}
@@ -52,13 +52,15 @@ class Seyedcast_Stats {
 		$sql = "CREATE TABLE {$table} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			show_id bigint(20) unsigned NOT NULL,
+			episode_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			view_date date NOT NULL,
 			unique_views int(10) unsigned NOT NULL DEFAULT 0,
 			total_views int(10) unsigned NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
-			UNIQUE KEY show_date (show_id, view_date),
+			UNIQUE KEY show_episode_date (show_id, episode_id, view_date),
 			KEY view_date (view_date),
-			KEY show_id (show_id)
+			KEY show_id (show_id),
+			KEY episode_id (episode_id)
 		) {$charset};";
 
 		dbDelta( $sql );
@@ -66,13 +68,82 @@ class Seyedcast_Stats {
 	}
 
 	/**
-	 * Ensure table exists after install or update.
+	 * Upgrade stats table schema.
 	 */
-	public function maybe_create_table() {
+	public static function upgrade_table() {
+		global $wpdb;
+
+		if ( ! self::table_exists() ) {
+			self::create_table();
+			return;
+		}
+
 		if ( get_option( self::TABLE_OPTION, '' ) === self::TABLE_VERSION ) {
 			return;
 		}
-		self::create_table();
+
+		$table = self::table_name();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$column = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'episode_id'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		if ( empty( $column ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN episode_id bigint(20) unsigned NOT NULL DEFAULT 0 AFTER show_id" );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$old_index = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'show_date'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( ! empty( $old_index ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( "ALTER TABLE {$table} DROP INDEX show_date" );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$new_index = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'show_episode_date'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( empty( $new_index ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY show_episode_date (show_id, episode_id, view_date)" );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$episode_index = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'episode_id'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( empty( $episode_index ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( "ALTER TABLE {$table} ADD KEY episode_id (episode_id)" );
+		}
+
+		update_option( self::TABLE_OPTION, self::TABLE_VERSION, false );
+	}
+
+	/**
+	 * Whether the stats table exists.
+	 *
+	 * @return bool
+	 */
+	public static function table_exists() {
+		global $wpdb;
+
+		$table = self::table_name();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+	}
+
+	/**
+	 * Ensure table exists after install or update.
+	 */
+	public function maybe_create_table() {
+		self::ensure_table();
+	}
+
+	/**
+	 * Create table when missing (frontend-safe).
+	 */
+	public static function ensure_table() {
+		if ( ! self::table_exists() ) {
+			self::create_table();
+			return;
+		}
+		self::upgrade_table();
 	}
 
 	/**
@@ -99,10 +170,12 @@ class Seyedcast_Stats {
 			return;
 		}
 
+		$episodes_by_show = self::get_episodes_grouped_by_show();
+
 		wp_enqueue_style( 'seyedcast-admin', SEYEDCAST_URL . 'admin/css/admin.css', array(), SEYEDCAST_VERSION );
 		wp_enqueue_script(
 			'chartjs',
-			'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+			SEYEDCAST_URL . 'admin/js/vendor/chart.umd.min.js',
 			array(),
 			'4.4.1',
 			true
@@ -119,52 +192,104 @@ class Seyedcast_Stats {
 			'seyedcast-stats',
 			'seyedcastStats',
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'seyedcast_stats_chart' ),
-				'i18n'    => array(
-					'unique'  => __( 'بازدید یکتا', 'seyedcast' ),
-					'total'   => __( 'کل بازدید', 'seyedcast' ),
-					'loading' => __( 'در حال بارگذاری…', 'seyedcast' ),
-					'error'   => __( 'خطا در بارگذاری آمار.', 'seyedcast' ),
-					'empty'   => __( 'داده‌ای برای این بازه یافت نشد.', 'seyedcast' ),
+				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'seyedcast_stats_chart' ),
+				'episodes' => $episodes_by_show,
+				'i18n'     => array(
+					'unique'         => __( 'بازدید یکتا', 'seyedcast' ),
+					'total'          => __( 'کل بازدید', 'seyedcast' ),
+					'loading'        => __( 'در حال بارگذاری…', 'seyedcast' ),
+					'error'          => __( 'خطا در بارگذاری آمار.', 'seyedcast' ),
+					'empty'          => __( 'داده‌ای برای این بازه یافت نشد.', 'seyedcast' ),
+					'scopeAllShows'  => __( 'همه پادکست‌ها', 'seyedcast' ),
+					'scopeShow'      => __( 'یک پادکست', 'seyedcast' ),
+					'scopeEpisode'   => __( 'یک اپیزود', 'seyedcast' ),
+					'pickShow'       => __( '— انتخاب پادکست —', 'seyedcast' ),
+					'pickEpisode'    => __( '— انتخاب اپیزود —', 'seyedcast' ),
+					'noEpisodes'     => __( 'اپیزودی برای این پادکست نیست.', 'seyedcast' ),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Record a view for a show.
+	 * Record a show view.
 	 *
 	 * @param int  $show_id   Show post ID.
-	 * @param bool $is_unique Whether this is a unique view (no cookie yet).
+	 * @param bool $is_unique Whether this is a unique view.
 	 */
-	public static function record_view( $show_id, $is_unique ) {
-		global $wpdb;
-
+	public static function record_show_view( $show_id, $is_unique ) {
 		$show_id = absint( $show_id );
 		if ( $show_id < 1 ) {
 			return;
 		}
+		self::increment_meta( $show_id, $is_unique );
+		self::increment_daily( $show_id, 0, $is_unique );
+	}
 
-		$total = (int) get_post_meta( $show_id, self::TOTAL_META, true );
-		update_post_meta( $show_id, self::TOTAL_META, $total + 1 );
-
-		if ( $is_unique ) {
-			$unique = (int) get_post_meta( $show_id, Seyedcast_App::VIEW_META, true );
-			update_post_meta( $show_id, Seyedcast_App::VIEW_META, $unique + 1 );
+	/**
+	 * Record an episode view.
+	 *
+	 * @param int  $episode_id Episode post ID.
+	 * @param bool $is_unique  Whether this is a unique view.
+	 */
+	public static function record_episode_view( $episode_id, $is_unique ) {
+		$episode_id = absint( $episode_id );
+		if ( $episode_id < 1 ) {
+			return;
 		}
 
-		$table = self::table_name();
-		$date  = current_time( 'Y-m-d' );
+		$show_id = Seyedcast_Meta::get_show_id( $episode_id );
+		if ( $show_id < 1 ) {
+			return;
+		}
+
+		self::increment_meta( $episode_id, $is_unique );
+		self::increment_daily( $show_id, $episode_id, $is_unique );
+	}
+
+	/**
+	 * Increment cumulative post meta counters.
+	 *
+	 * @param int  $post_id   Show or episode post ID.
+	 * @param bool $is_unique Unique view flag.
+	 */
+	private static function increment_meta( $post_id, $is_unique ) {
+		$total = (int) get_post_meta( $post_id, self::TOTAL_META, true );
+		update_post_meta( $post_id, self::TOTAL_META, $total + 1 );
+
+		if ( $is_unique ) {
+			$unique = (int) get_post_meta( $post_id, Seyedcast_App::VIEW_META, true );
+			update_post_meta( $post_id, Seyedcast_App::VIEW_META, $unique + 1 );
+		}
+	}
+
+	/**
+	 * Upsert daily view row.
+	 *
+	 * @param int  $show_id    Show post ID.
+	 * @param int  $episode_id Episode post ID (0 for show-level).
+	 * @param bool $is_unique  Unique view flag.
+	 */
+	private static function increment_daily( $show_id, $episode_id, $is_unique ) {
+		global $wpdb;
+
+		self::ensure_table();
+
+		$table      = self::table_name();
+		$date       = current_time( 'Y-m-d' );
+		$show_id    = absint( $show_id );
+		$episode_id = absint( $episode_id );
 
 		if ( $is_unique ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query(
 				$wpdb->prepare(
-					"INSERT INTO {$table} (show_id, view_date, unique_views, total_views)
-					VALUES (%d, %s, 1, 1)
+					"INSERT INTO {$table} (show_id, episode_id, view_date, unique_views, total_views)
+					VALUES (%d, %d, %s, 1, 1)
 					ON DUPLICATE KEY UPDATE unique_views = unique_views + 1, total_views = total_views + 1",
 					$show_id,
+					$episode_id,
 					$date
 				)
 			);
@@ -172,14 +297,25 @@ class Seyedcast_Stats {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->query(
 				$wpdb->prepare(
-					"INSERT INTO {$table} (show_id, view_date, unique_views, total_views)
-					VALUES (%d, %s, 0, 1)
+					"INSERT INTO {$table} (show_id, episode_id, view_date, unique_views, total_views)
+					VALUES (%d, %d, %s, 0, 1)
 					ON DUPLICATE KEY UPDATE total_views = total_views + 1",
 					$show_id,
+					$episode_id,
 					$date
 				)
 			);
 		}
+	}
+
+	/**
+	 * Backward-compatible alias for show views.
+	 *
+	 * @param int  $show_id   Show post ID.
+	 * @param bool $is_unique Whether this is a unique view.
+	 */
+	public static function record_view( $show_id, $is_unique ) {
+		self::record_show_view( $show_id, $is_unique );
 	}
 
 	/**
@@ -194,15 +330,15 @@ class Seyedcast_Stats {
 	}
 
 	/**
-	 * Get cumulative view count for a show.
+	 * Get cumulative view count for a show or episode.
 	 *
-	 * @param int         $show_id Show ID.
+	 * @param int         $post_id Show or episode post ID.
 	 * @param string|null $mode    unique|total or null for settings default.
 	 * @return int
 	 */
-	public static function get_view_count( $show_id, $mode = null ) {
-		$show_id = absint( $show_id );
-		if ( $show_id < 1 ) {
+	public static function get_view_count( $post_id, $mode = null ) {
+		$post_id = absint( $post_id );
+		if ( $post_id < 1 ) {
 			return 0;
 		}
 
@@ -211,10 +347,10 @@ class Seyedcast_Stats {
 		}
 
 		if ( 'total' === $mode ) {
-			return (int) get_post_meta( $show_id, self::TOTAL_META, true );
+			return (int) get_post_meta( $post_id, self::TOTAL_META, true );
 		}
 
-		return (int) get_post_meta( $show_id, Seyedcast_App::VIEW_META, true );
+		return (int) get_post_meta( $post_id, Seyedcast_App::VIEW_META, true );
 	}
 
 	/**
@@ -233,41 +369,58 @@ class Seyedcast_Stats {
 	}
 
 	/**
-	 * Daily chart data for one or all shows.
+	 * Daily chart data for shows or episodes.
 	 *
-	 * @param int    $show_id 0 for all shows aggregated.
-	 * @param int    $days    Number of days.
-	 * @param string $mode    unique|total.
+	 * @param int    $show_id    Show ID (0 for all shows).
+	 * @param int    $days       Number of days.
+	 * @param string $mode       unique|total.
+	 * @param int    $episode_id Episode ID (0 for show-level rows).
 	 * @return array{labels:string[],values:int[],total:int}
 	 */
-	public static function get_daily_chart_data( $show_id, $days, $mode = 'unique' ) {
+	public static function get_daily_chart_data( $show_id, $days, $mode = 'unique', $episode_id = 0 ) {
 		global $wpdb;
 
-		$days    = max( 1, min( 365, (int) $days ) );
-		$show_id = absint( $show_id );
-		$mode    = 'total' === $mode ? 'total' : 'unique';
-		$column  = 'total' === $mode ? 'total_views' : 'unique_views';
-		$table   = self::table_name();
+		self::ensure_table();
+
+		$days       = max( 1, min( 365, (int) $days ) );
+		$show_id    = absint( $show_id );
+		$episode_id = absint( $episode_id );
+		$mode       = 'total' === $mode ? 'total' : 'unique';
+		$column     = 'total' === $mode ? 'total_views' : 'unique_views';
+		$table      = self::table_name();
 
 		$end   = current_time( 'Y-m-d' );
-		$start = gmdate( 'Y-m-d', strtotime( $end . ' -' . ( $days - 1 ) . ' days' ) );
+		$start = wp_date( 'Y-m-d', current_time( 'timestamp' ) - ( ( $days - 1 ) * DAY_IN_SECONDS ) );
 
 		$labels = array();
 		$map    = array();
-		$cursor = $start;
-		while ( $cursor <= $end ) {
-			$labels[]     = $cursor;
-			$map[ $cursor ] = 0;
-			$cursor       = gmdate( 'Y-m-d', strtotime( $cursor . ' +1 day' ) );
+		for ( $i = 0; $i < $days; $i++ ) {
+			$day         = wp_date( 'Y-m-d', current_time( 'timestamp' ) - ( ( $days - 1 - $i ) * DAY_IN_SECONDS ) );
+			$labels[]    = $day;
+			$map[ $day ] = 0;
 		}
 
-		if ( $show_id > 0 ) {
+		if ( $episode_id > 0 ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT view_date, {$column} AS views
 					FROM {$table}
-					WHERE show_id = %d AND view_date BETWEEN %s AND %s
+					WHERE episode_id = %d AND view_date BETWEEN %s AND %s
+					ORDER BY view_date ASC",
+					$episode_id,
+					$start,
+					$end
+				),
+				ARRAY_A
+			);
+		} elseif ( $show_id > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT view_date, {$column} AS views
+					FROM {$table}
+					WHERE show_id = %d AND episode_id = 0 AND view_date BETWEEN %s AND %s
 					ORDER BY view_date ASC",
 					$show_id,
 					$start,
@@ -281,7 +434,7 @@ class Seyedcast_Stats {
 				$wpdb->prepare(
 					"SELECT view_date, SUM({$column}) AS views
 					FROM {$table}
-					WHERE view_date BETWEEN %s AND %s
+					WHERE episode_id = 0 AND view_date BETWEEN %s AND %s
 					GROUP BY view_date
 					ORDER BY view_date ASC",
 					$start,
@@ -293,7 +446,7 @@ class Seyedcast_Stats {
 
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				$date = isset( $row['view_date'] ) ? (string) $row['view_date'] : '';
+				$date = isset( $row['view_date'] ) ? substr( (string) $row['view_date'], 0, 10 ) : '';
 				if ( isset( $map[ $date ] ) ) {
 					$map[ $date ] = (int) $row['views'];
 				}
@@ -325,10 +478,12 @@ class Seyedcast_Stats {
 	/**
 	 * Summary totals for stats overview cards.
 	 *
-	 * @return array{unique:int,total:int,today_unique:int,today_total:int}
+	 * @return array{unique:int,total:int,today_unique:int,today_total:int,ep_unique:int,ep_total:int}
 	 */
 	public static function get_summary() {
 		global $wpdb;
+
+		self::ensure_table();
 
 		$table = self::table_name();
 		$today = current_time( 'Y-m-d' );
@@ -336,7 +491,11 @@ class Seyedcast_Stats {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$today_row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT COALESCE(SUM(unique_views), 0) AS unique_views, COALESCE(SUM(total_views), 0) AS total_views
+				"SELECT
+					COALESCE(SUM(CASE WHEN episode_id = 0 THEN unique_views ELSE 0 END), 0) AS show_unique,
+					COALESCE(SUM(CASE WHEN episode_id = 0 THEN total_views ELSE 0 END), 0) AS show_total,
+					COALESCE(SUM(CASE WHEN episode_id > 0 THEN unique_views ELSE 0 END), 0) AS ep_unique,
+					COALESCE(SUM(CASE WHEN episode_id > 0 THEN total_views ELSE 0 END), 0) AS ep_total
 				FROM {$table}
 				WHERE view_date = %s",
 				$today
@@ -353,6 +512,15 @@ class Seyedcast_Stats {
 			)
 		);
 
+		$episode_ids = get_posts(
+			array(
+				'post_type'      => 'seyedcast_episode',
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+
 		$unique_sum = 0;
 		$total_sum  = 0;
 		foreach ( $show_ids as $show_id ) {
@@ -360,11 +528,22 @@ class Seyedcast_Stats {
 			$total_sum  += (int) get_post_meta( $show_id, self::TOTAL_META, true );
 		}
 
+		$ep_unique_sum = 0;
+		$ep_total_sum  = 0;
+		foreach ( $episode_ids as $episode_id ) {
+			$ep_unique_sum += (int) get_post_meta( $episode_id, Seyedcast_App::VIEW_META, true );
+			$ep_total_sum  += (int) get_post_meta( $episode_id, self::TOTAL_META, true );
+		}
+
 		return array(
 			'unique'       => $unique_sum,
 			'total'        => $total_sum,
-			'today_unique' => isset( $today_row['unique_views'] ) ? (int) $today_row['unique_views'] : 0,
-			'today_total'  => isset( $today_row['total_views'] ) ? (int) $today_row['total_views'] : 0,
+			'today_unique' => isset( $today_row['show_unique'] ) ? (int) $today_row['show_unique'] : 0,
+			'today_total'  => isset( $today_row['show_total'] ) ? (int) $today_row['show_total'] : 0,
+			'ep_unique'    => $ep_unique_sum,
+			'ep_total'     => $ep_total_sum,
+			'ep_today_unique' => isset( $today_row['ep_unique'] ) ? (int) $today_row['ep_unique'] : 0,
+			'ep_today_total'  => isset( $today_row['ep_total'] ) ? (int) $today_row['ep_total'] : 0,
 		);
 	}
 
@@ -378,19 +557,74 @@ class Seyedcast_Stats {
 			wp_send_json_error( array( 'message' => __( 'دسترسی غیرمجاز.', 'seyedcast' ) ), 403 );
 		}
 
-		$show_id = isset( $_GET['show_id'] ) ? absint( $_GET['show_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$days    = isset( $_GET['days'] ) ? absint( $_GET['days'] ) : 30; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$mode    = isset( $_GET['mode'] ) ? sanitize_key( wp_unslash( $_GET['mode'] ) ) : 'unique'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$show_id    = isset( $_GET['show_id'] ) ? absint( $_GET['show_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$episode_id = isset( $_GET['episode_id'] ) ? absint( $_GET['episode_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$days       = isset( $_GET['days'] ) ? absint( $_GET['days'] ) : 30; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$mode       = isset( $_GET['mode'] ) ? sanitize_key( wp_unslash( $_GET['mode'] ) ) : 'unique'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
-		if ( $show_id > 0 ) {
+		if ( $episode_id > 0 ) {
+			$post = get_post( $episode_id );
+			if ( ! $post || 'seyedcast_episode' !== $post->post_type ) {
+				wp_send_json_error( array( 'message' => __( 'اپیزود نامعتبر.', 'seyedcast' ) ), 400 );
+			}
+			$show_id = 0;
+		} elseif ( $show_id > 0 ) {
 			$post = get_post( $show_id );
 			if ( ! $post || 'seyedcast_show' !== $post->post_type ) {
 				wp_send_json_error( array( 'message' => __( 'پادکست نامعتبر.', 'seyedcast' ) ), 400 );
 			}
 		}
 
-		$data = self::get_daily_chart_data( $show_id, $days, $mode );
+		$data = self::get_daily_chart_data( $show_id, $days, $mode, $episode_id );
 		wp_send_json_success( $data );
+	}
+
+	/**
+	 * Episodes grouped by show for stats filters.
+	 *
+	 * @return array<int, array<int, array{id:int,label:string}>>
+	 */
+	public static function get_episodes_grouped_by_show() {
+		$shows = get_posts(
+			array(
+				'post_type'      => 'seyedcast_show',
+				'posts_per_page' => -1,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+				'post_status'    => array( 'publish', 'draft', 'private' ),
+				'fields'         => 'ids',
+			)
+		);
+
+		$episodes = array();
+		foreach ( $shows as $show_id ) {
+			$items = get_posts(
+				array(
+					'post_type'      => 'seyedcast_episode',
+					'posts_per_page' => -1,
+					'orderby'        => 'date',
+					'order'          => 'DESC',
+					'post_status'    => array( 'publish', 'draft', 'private', 'future' ),
+					'meta_key'       => '_seyedcast_show_id',
+					'meta_value'     => (string) $show_id,
+				)
+			);
+
+			$episodes[ $show_id ] = array();
+			foreach ( $items as $episode ) {
+				$number = get_post_meta( $episode->ID, '_seyedcast_episode_number', true );
+				$label  = get_the_title( $episode );
+				if ( $number ) {
+					$label = sprintf( __( 'اپیزود %1$s — %2$s', 'seyedcast' ), $number, $label );
+				}
+				$episodes[ $show_id ][] = array(
+					'id'    => (int) $episode->ID,
+					'label' => $label,
+				);
+			}
+		}
+
+		return $episodes;
 	}
 
 	/**

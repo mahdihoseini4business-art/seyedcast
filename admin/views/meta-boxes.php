@@ -54,4 +54,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<button type="button" class="button" id="seyedcast_remove_audio" <?php disabled( ! $audio_id ); ?>><?php esc_html_e( 'حذف', 'seyedcast' ); ?></button>
 	</p>
 	<p class="description"><?php esc_html_e( 'تصویر شاخص به‌عنوان کاور اپیزود استفاده می‌شود. اگر نباشد، کاور پادکست نمایش داده می‌شود.', 'seyedcast' ); ?></p>
+	<hr />
+	<p>
+		<strong><?php esc_html_e( 'بازدید یکتا', 'seyedcast' ); ?>:</strong>
+		<?php echo esc_html( number_format_i18n( (int) get_post_meta( $post->ID, Seyedcast_App::VIEW_META, true ) ) ); ?>
+	</p>
+	<p>
+		<strong><?php esc_html_e( 'کل بازدید', 'seyedcast' ); ?>:</strong>
+		<?php echo esc_html( number_format_i18n( (int) get_post_meta( $post->ID, Seyedcast_Stats::TOTAL_META, true ) ) ); ?>
+	</p>
+	<p class="description">
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=seyedcast-stats' ) ); ?>"><?php esc_html_e( 'مشاهده نمودار آمار', 'seyedcast' ); ?></a>
+	</p>
 </div>

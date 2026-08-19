@@ -43,7 +43,7 @@ class Seyedcast_Plugin {
 		add_rewrite_rule( '^seyedcast-sw\.js$', 'index.php?seyedcast_sw=1', 'top' );
 		flush_rewrite_rules();
 
-		Seyedcast_Stats::create_table();
+		Seyedcast_Stats::ensure_table();
 
 		$defaults = Seyedcast_Settings::defaults();
 		if ( false === get_option( 'seyedcast_settings' ) ) {
