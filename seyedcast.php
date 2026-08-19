@@ -40,6 +40,7 @@ function seyedcast_load_files() {
 		'includes/class-seo.php',
 		'includes/class-assets.php',
 		'includes/class-templates.php',
+		'includes/class-stats.php',
 		'includes/class-app.php',
 		'includes/class-pwa.php',
 		'includes/class-shortcode.php',

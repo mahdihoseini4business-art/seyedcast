@@ -1,0 +1,87 @@
+<?php
+/**
+ * Stats admin page.
+ *
+ * @package Seyedcast
+ * @var WP_Post[] $shows
+ * @var array     $summary
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+$default_mode = Seyedcast_Stats::view_mode();
+?>
+<div class="wrap seyedcast-settings seyedcast-stats" dir="rtl">
+	<h1><?php esc_html_e( 'آمار بازدید پادکست‌ها', 'seyedcast' ); ?></h1>
+
+	<div class="seyedcast-stats__cards">
+		<div class="seyedcast-stats-card">
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'بازدید یکتا (کل)', 'seyedcast' ); ?></span>
+			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['unique'] ) ); ?></strong>
+		</div>
+		<div class="seyedcast-stats-card">
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'کل بازدیدها', 'seyedcast' ); ?></span>
+			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['total'] ) ); ?></strong>
+		</div>
+		<div class="seyedcast-stats-card">
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'بازدید یکتای امروز', 'seyedcast' ); ?></span>
+			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['today_unique'] ) ); ?></strong>
+		</div>
+		<div class="seyedcast-stats-card">
+			<span class="seyedcast-stats-card__label"><?php esc_html_e( 'کل بازدید امروز', 'seyedcast' ); ?></span>
+			<strong class="seyedcast-stats-card__value"><?php echo esc_html( number_format_i18n( (int) $summary['today_total'] ) ); ?></strong>
+		</div>
+	</div>
+
+	<div class="seyedcast-admin-card seyedcast-stats__filters">
+		<strong><?php esc_html_e( 'فیلتر نمودار', 'seyedcast' ); ?></strong>
+		<div class="seyedcast-stats__filter-row">
+			<label for="seyedcast_stats_show">
+				<?php esc_html_e( 'پادکست', 'seyedcast' ); ?>
+				<select id="seyedcast_stats_show">
+					<option value="0"><?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?></option>
+					<?php foreach ( $shows as $show ) : ?>
+						<option value="<?php echo esc_attr( (string) $show->ID ); ?>">
+							<?php echo esc_html( get_the_title( $show ) ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+
+			<label for="seyedcast_stats_days">
+				<?php esc_html_e( 'بازه زمانی', 'seyedcast' ); ?>
+				<select id="seyedcast_stats_days">
+					<option value="7"><?php esc_html_e( '۷ روز گذشته', 'seyedcast' ); ?></option>
+					<option value="30" selected><?php esc_html_e( '۳۰ روز گذشته', 'seyedcast' ); ?></option>
+					<option value="90"><?php esc_html_e( '۹۰ روز گذشته', 'seyedcast' ); ?></option>
+				</select>
+			</label>
+
+			<label for="seyedcast_stats_mode">
+				<?php esc_html_e( 'نوع بازدید', 'seyedcast' ); ?>
+				<select id="seyedcast_stats_mode">
+					<option value="unique" <?php selected( $default_mode, 'unique' ); ?>><?php esc_html_e( 'بازدید یکتا', 'seyedcast' ); ?></option>
+					<option value="total" <?php selected( $default_mode, 'total' ); ?>><?php esc_html_e( 'کل بازدید', 'seyedcast' ); ?></option>
+				</select>
+			</label>
+		</div>
+	</div>
+
+	<div class="seyedcast-admin-card seyedcast-stats__chart-wrap">
+		<div class="seyedcast-stats__chart-head">
+			<strong><?php esc_html_e( 'نمودار بازدید روزانه', 'seyedcast' ); ?></strong>
+			<span id="seyedcast_stats_period_total" class="seyedcast-stats__period-total"></span>
+		</div>
+		<p id="seyedcast_stats_status" class="seyedcast-stats__status" hidden></p>
+		<div class="seyedcast-stats__canvas">
+			<canvas id="seyedcast_stats_chart" height="120"></canvas>
+		</div>
+	</div>
+
+	<p class="description">
+		<?php esc_html_e( 'برای تنظیم نمایش بازدید در صفحه پادکست، به تب «صفحه پادکست» در تنظیمات Seyedcast بروید.', 'seyedcast' ); ?>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=seyedcast&tab=page' ) ); ?>"><?php esc_html_e( 'رفتن به تنظیمات', 'seyedcast' ); ?></a>
+	</p>
+</div>

@@ -42,6 +42,12 @@ ob_start();
 				<?php endif; ?>
 				<div class="seyedcast-hero__meta">
 					<span class="seyedcast-chip"><?php echo esc_html( sprintf( _n( '%s اپیزود', '%s اپیزود', count( $episodes ), 'seyedcast' ), number_format_i18n( count( $episodes ) ) ) ); ?></span>
+					<?php
+					$view_count = Seyedcast_Stats::get_view_count( $show_id );
+					if ( $view_count > 0 ) :
+						?>
+						<span class="seyedcast-chip"><?php echo esc_html( sprintf( '%s %s', number_format_i18n( $view_count ), Seyedcast_Stats::view_label() ) ); ?></span>
+					<?php endif; ?>
 				</div>
 				<?php if ( $first && ! empty( $first['audio'] ) ) : ?>
 					<div class="seyedcast-hero__actions">

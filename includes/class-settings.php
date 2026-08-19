@@ -52,6 +52,7 @@ class Seyedcast_Settings {
 			'upcoming_events'      => array(),
 			'suggestions_enabled'  => 1,
 			'comments_enabled'     => 1,
+			'view_count_mode'      => 'unique',
 			'pwa_enabled'          => 1,
 			'pwa_prompt'        => 1,
 			'pwa_name'          => 'Seyedcast',
@@ -270,6 +271,9 @@ class Seyedcast_Settings {
 			$out['suggestions_enabled'] = ! empty( $input['suggestions_enabled'] ) ? 1 : 0;
 			$out['comments_enabled']    = ! empty( $input['comments_enabled'] ) ? 1 : 0;
 
+			$view_mode = isset( $input['view_count_mode'] ) ? sanitize_key( $input['view_count_mode'] ) : 'unique';
+			$out['view_count_mode']    = in_array( $view_mode, array( 'unique', 'total' ), true ) ? $view_mode : 'unique';
+
 			$out['sidebar_banners'] = array();
 			if ( ! empty( $input['sidebar_banners'] ) && is_array( $input['sidebar_banners'] ) ) {
 				$count = 0;
@@ -317,6 +321,7 @@ class Seyedcast_Settings {
 			$out['upcoming_events']     = $existing['upcoming_events'];
 			$out['suggestions_enabled'] = isset( $existing['suggestions_enabled'] ) ? (int) $existing['suggestions_enabled'] : 1;
 			$out['comments_enabled']    = isset( $existing['comments_enabled'] ) ? (int) $existing['comments_enabled'] : 1;
+			$out['view_count_mode']     = isset( $existing['view_count_mode'] ) ? $existing['view_count_mode'] : 'unique';
 		}
 
 		return $out;

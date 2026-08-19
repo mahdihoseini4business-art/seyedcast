@@ -102,8 +102,9 @@ class Seyedcast_Meta {
 	 */
 	public function render_show_box( $post ) {
 		wp_nonce_field( 'seyedcast_save_show', 'seyedcast_show_nonce' );
-		$accent = get_post_meta( $post->ID, '_seyedcast_accent_color', true );
-		$views  = (int) get_post_meta( $post->ID, Seyedcast_App::VIEW_META, true );
+		$accent  = get_post_meta( $post->ID, '_seyedcast_accent_color', true );
+		$unique  = (int) get_post_meta( $post->ID, Seyedcast_App::VIEW_META, true );
+		$total   = (int) get_post_meta( $post->ID, Seyedcast_Stats::TOTAL_META, true );
 		?>
 		<p>
 			<label for="seyedcast_accent_color"><strong><?php esc_html_e( 'رنگ اختصاصی پادکست', 'seyedcast' ); ?></strong></label>
@@ -111,8 +112,15 @@ class Seyedcast_Meta {
 		</p>
 		<p class="description"><?php esc_html_e( 'برای هیرو و گرادیان صفحه پادکست استفاده می‌شود.', 'seyedcast' ); ?></p>
 		<p>
-			<strong><?php esc_html_e( 'بازدیدها', 'seyedcast' ); ?>:</strong>
-			<?php echo esc_html( number_format_i18n( $views ) ); ?>
+			<strong><?php esc_html_e( 'بازدید یکتا', 'seyedcast' ); ?>:</strong>
+			<?php echo esc_html( number_format_i18n( $unique ) ); ?>
+		</p>
+		<p>
+			<strong><?php esc_html_e( 'کل بازدید', 'seyedcast' ); ?>:</strong>
+			<?php echo esc_html( number_format_i18n( $total ) ); ?>
+		</p>
+		<p class="description">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=seyedcast-stats' ) ); ?>"><?php esc_html_e( 'مشاهده نمودار آمار', 'seyedcast' ); ?></a>
 		</p>
 		<?php
 	}

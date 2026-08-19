@@ -65,3 +65,76 @@
 	margin-bottom: 10px;
 }
 
+.seyedcast-stats__cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 12px;
+	max-width: 960px;
+	margin: 16px 0 20px;
+}
+
+.seyedcast-stats-card {
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	padding: 14px 16px;
+	background: #fff;
+}
+
+.seyedcast-stats-card__label {
+	display: block;
+	font-size: 12px;
+	color: #646970;
+	margin-bottom: 6px;
+}
+
+.seyedcast-stats-card__value {
+	font-size: 22px;
+	line-height: 1.2;
+}
+
+.seyedcast-stats__filter-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px 24px;
+	margin-top: 8px;
+}
+
+.seyedcast-stats__filter-row label {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.seyedcast-stats__filter-row select {
+	min-width: 180px;
+}
+
+.seyedcast-stats__chart-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.seyedcast-stats__period-total {
+	color: #646970;
+	font-size: 13px;
+}
+
+.seyedcast-stats__canvas {
+	position: relative;
+	min-height: 280px;
+}
+
+.seyedcast-stats__status {
+	margin: 0 0 10px;
+	color: #646970;
+}
+
+.seyedcast-stats__status.is-error {
+	color: #b32d2e;
+}
+

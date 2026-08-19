@@ -27,6 +27,7 @@ class Seyedcast_Plugin {
 		new Seyedcast_Seo();
 		new Seyedcast_Assets();
 		new Seyedcast_Templates();
+		new Seyedcast_Stats();
 		new Seyedcast_App();
 		new Seyedcast_Pwa();
 		new Seyedcast_Shortcode();
@@ -41,6 +42,8 @@ class Seyedcast_Plugin {
 		add_rewrite_rule( '^seyedcast-manifest\.webmanifest$', 'index.php?seyedcast_manifest=1', 'top' );
 		add_rewrite_rule( '^seyedcast-sw\.js$', 'index.php?seyedcast_sw=1', 'top' );
 		flush_rewrite_rules();
+
+		Seyedcast_Stats::create_table();
 
 		$defaults = Seyedcast_Settings::defaults();
 		if ( false === get_option( 'seyedcast_settings' ) ) {

@@ -197,6 +197,27 @@ while ( count( $events ) < 3 ) {
 				</tr>
 			</table>
 
+			<h2><?php esc_html_e( 'آمار بازدید', 'seyedcast' ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'نمایش در صفحه پادکست', 'seyedcast' ); ?></th>
+					<td>
+						<label style="display:block;margin-bottom:6px;">
+							<input type="radio" name="seyedcast_settings[view_count_mode]" value="unique" <?php checked( isset( $settings['view_count_mode'] ) ? $settings['view_count_mode'] : 'unique', 'unique' ); ?> />
+							<?php esc_html_e( 'بازدید یکتا (پیش‌فرض)', 'seyedcast' ); ?>
+						</label>
+						<label style="display:block;">
+							<input type="radio" name="seyedcast_settings[view_count_mode]" value="total" <?php checked( isset( $settings['view_count_mode'] ) ? $settings['view_count_mode'] : 'unique', 'total' ); ?> />
+							<?php esc_html_e( 'کل بازدیدها', 'seyedcast' ); ?>
+						</label>
+						<p class="description"><?php esc_html_e( 'بازدید یکتا: هر بازدیدکننده حداکثر یک‌بار در هر ۶ ساعت. کل بازدید: هر بارگذاری صفحه.', 'seyedcast' ); ?></p>
+						<p class="description">
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=seyedcast-stats' ) ); ?>"><?php esc_html_e( 'مشاهده نمودارهای آمار', 'seyedcast' ); ?></a>
+						</p>
+					</td>
+				</tr>
+			</table>
+
 			<h2><?php esc_html_e( 'پیشنهاد و نظرات', 'seyedcast' ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr>

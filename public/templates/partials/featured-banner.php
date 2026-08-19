@@ -64,7 +64,7 @@ $render_show_slide = static function ( $slide, $cta, $active ) {
 			<div class="seyedcast-featured__meta">
 				<span class="seyedcast-chip"><?php echo esc_html( sprintf( _n( '%s اپیزود', '%s اپیزود', (int) $slide['count'], 'seyedcast' ), number_format_i18n( (int) $slide['count'] ) ) ); ?></span>
 				<?php if ( ! empty( $slide['views'] ) ) : ?>
-					<span class="seyedcast-chip"><?php echo esc_html( sprintf( __( '%s بازدید', 'seyedcast' ), number_format_i18n( (int) $slide['views'] ) ) ); ?></span>
+					<span class="seyedcast-chip"><?php echo esc_html( sprintf( '%s %s', number_format_i18n( (int) $slide['views'] ), Seyedcast_Stats::view_label() ) ); ?></span>
 				<?php endif; ?>
 			</div>
 			<div class="seyedcast-featured__actions">

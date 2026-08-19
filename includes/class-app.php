@@ -130,16 +130,15 @@ class Seyedcast_App {
 			return;
 		}
 
-		$cookie = self::VIEW_COOKIE . $show_id;
-		if ( isset( $_COOKIE[ $cookie ] ) ) {
-			return;
+		$cookie    = self::VIEW_COOKIE . $show_id;
+		$is_unique = ! isset( $_COOKIE[ $cookie ] );
+
+		Seyedcast_Stats::record_view( $show_id, $is_unique );
+
+		if ( $is_unique ) {
+			// 6 hours throttle for unique views.
+			setcookie( $cookie, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 		}
-
-		$count = (int) get_post_meta( $show_id, self::VIEW_META, true );
-		update_post_meta( $show_id, self::VIEW_META, $count + 1 );
-
-		// 6 hours throttle.
-		setcookie( $cookie, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 	}
 
 	/**
@@ -220,7 +219,7 @@ class Seyedcast_App {
 			'url'      => get_permalink( $show ),
 			'cover'    => Seyedcast_Templates::cover_url( $show->ID ),
 			'excerpt'  => $excerpt,
-			'views'    => (int) get_post_meta( $show->ID, self::VIEW_META, true ),
+			'views'    => Seyedcast_Stats::get_view_count( $show->ID ),
 			'count'    => count( $episodes ),
 			'payload'  => $first,
 		);
