@@ -109,7 +109,7 @@ class Seyedcast_App {
 	 * Increment show/episode view counts (unique throttled per visitor).
 	 */
 	public function maybe_track_view() {
-		if ( is_admin() || wp_doing_ajax() || self::is_partial_request() ) {
+		if ( is_admin() || wp_doing_ajax() ) {
 			return;
 		}
 

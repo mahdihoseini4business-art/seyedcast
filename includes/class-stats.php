@@ -71,16 +71,23 @@ class Seyedcast_Stats {
 	 * Upgrade stats table schema.
 	 */
 	public static function upgrade_table() {
-		global $wpdb;
-
 		if ( ! self::table_exists() ) {
 			self::create_table();
 			return;
 		}
 
-		if ( get_option( self::TABLE_OPTION, '' ) === self::TABLE_VERSION ) {
-			return;
+		self::repair_table_schema();
+
+		if ( get_option( self::TABLE_OPTION, '' ) !== self::TABLE_VERSION ) {
+			update_option( self::TABLE_OPTION, self::TABLE_VERSION, false );
 		}
+	}
+
+	/**
+	 * Fix legacy indexes/columns (safe to run on every request).
+	 */
+	private static function repair_table_schema() {
+		global $wpdb;
 
 		$table = self::table_name();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -91,6 +98,7 @@ class Seyedcast_Stats {
 			$wpdb->query( "ALTER TABLE {$table} ADD COLUMN episode_id bigint(20) unsigned NOT NULL DEFAULT 0 AFTER show_id" );
 		}
 
+		// Legacy unique key (show_id + view_date) blocks multiple episodes per show/day.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$old_index = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'show_date'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		if ( ! empty( $old_index ) ) {
@@ -111,8 +119,6 @@ class Seyedcast_Stats {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
 			$wpdb->query( "ALTER TABLE {$table} ADD KEY episode_id (episode_id)" );
 		}
-
-		update_option( self::TABLE_OPTION, self::TABLE_VERSION, false );
 	}
 
 	/**
@@ -294,19 +300,70 @@ class Seyedcast_Stats {
 	}
 
 	/**
+	 * Site-local calendar date (Y-m-d).
+	 *
+	 * @param int $days_ago Days before today (0 = today).
+	 * @return string
+	 */
+	public static function local_date( $days_ago = 0 ) {
+		$days_ago = max( 0, (int) $days_ago );
+		$dt       = new DateTimeImmutable( 'now', wp_timezone() );
+
+		if ( $days_ago > 0 ) {
+			$dt = $dt->modify( '-' . $days_ago . ' days' );
+		}
+
+		return $dt->format( 'Y-m-d' );
+	}
+
+	/**
+	 * Normalize DB view_date to Y-m-d.
+	 *
+	 * @param mixed $raw Raw DB value.
+	 * @return string
+	 */
+	private static function normalize_view_date( $raw ) {
+		if ( $raw instanceof DateTimeInterface ) {
+			return $raw->format( 'Y-m-d' );
+		}
+
+		$raw = trim( (string) $raw );
+		if ( preg_match( '/^\d{4}-\d{2}-\d{2}/', $raw, $matches ) ) {
+			return $matches[0];
+		}
+
+		return $raw;
+	}
+
+	/**
+	 * Chart axis label for a local date.
+	 *
+	 * @param string $ymd Y-m-d.
+	 * @return string
+	 */
+	private static function format_chart_label( $ymd ) {
+		$dt = DateTimeImmutable::createFromFormat( 'Y-m-d', $ymd, wp_timezone() );
+		if ( ! $dt ) {
+			return $ymd;
+		}
+
+		return wp_date( 'Y/m/d', $dt->getTimestamp() );
+	}
+
+	/**
 	 * Upsert daily view row.
 	 *
 	 * @param int  $show_id    Show post ID.
 	 * @param int  $episode_id Episode post ID (0 for show-level).
 	 * @param bool $is_unique  Unique view flag.
 	 */
-	private static function increment_daily( $show_id, $episode_id, $is_unique ) {
+	private static function increment_daily( $show_id, $episode_id, $is_unique, $retry = true ) {
 		global $wpdb;
 
 		self::ensure_table();
 
 		$table      = self::table_name();
-		$date       = current_time( 'Y-m-d' );
+		$date       = self::local_date( 0 );
 		$show_id    = absint( $show_id );
 		$episode_id = absint( $episode_id );
 
@@ -336,9 +393,9 @@ class Seyedcast_Stats {
 			);
 		}
 
-		if ( false === $result && ! self::schema_ready() ) {
-			update_option( self::TABLE_OPTION, '1', false );
-			self::upgrade_table();
+		if ( false === $result && $retry ) {
+			self::repair_table_schema();
+			self::increment_daily( $show_id, $episode_id, $is_unique, false );
 		}
 	}
 
@@ -423,17 +480,16 @@ class Seyedcast_Stats {
 		$column     = 'total' === $mode ? 'total_views' : 'unique_views';
 		$table      = self::table_name();
 
-		$end   = current_time( 'Y-m-d' );
-		$start = wp_date( 'Y-m-d', current_time( 'timestamp' ) - ( ( $days - 1 ) * DAY_IN_SECONDS ) );
-
 		$labels           = array();
 		$formatted_labels = array();
 		$map              = array();
+		$start            = self::local_date( $days - 1 );
+		$end              = self::local_date( 0 );
+
 		for ( $i = 0; $i < $days; $i++ ) {
-			$timestamp          = (int) current_time( 'timestamp' ) - ( ( $days - 1 - $i ) * DAY_IN_SECONDS );
-			$day                = wp_date( 'Y-m-d', $timestamp );
+			$day                = self::local_date( $days - 1 - $i );
 			$labels[]           = $day;
-			$formatted_labels[] = wp_date( 'Y/m/d', $timestamp );
+			$formatted_labels[] = self::format_chart_label( $day );
 			$map[ $day ]        = 0;
 		}
 
@@ -455,9 +511,10 @@ class Seyedcast_Stats {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$rows = $wpdb->get_results(
 				$wpdb->prepare(
-					"SELECT view_date, {$column} AS views
+					"SELECT view_date, SUM({$column}) AS views
 					FROM {$table}
-					WHERE show_id = %d AND episode_id = 0 AND view_date BETWEEN %s AND %s
+					WHERE show_id = %d AND view_date BETWEEN %s AND %s
+					GROUP BY view_date
 					ORDER BY view_date ASC",
 					$show_id,
 					$start,
@@ -471,7 +528,7 @@ class Seyedcast_Stats {
 				$wpdb->prepare(
 					"SELECT view_date, SUM({$column}) AS views
 					FROM {$table}
-					WHERE episode_id = 0 AND view_date BETWEEN %s AND %s
+					WHERE view_date BETWEEN %s AND %s
 					GROUP BY view_date
 					ORDER BY view_date ASC",
 					$start,
@@ -483,9 +540,9 @@ class Seyedcast_Stats {
 
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				$date = isset( $row['view_date'] ) ? substr( (string) $row['view_date'], 0, 10 ) : '';
+				$date = self::normalize_view_date( isset( $row['view_date'] ) ? $row['view_date'] : '' );
 				if ( isset( $map[ $date ] ) ) {
-					$map[ $date ] = (int) $row['views'];
+					$map[ $date ] += (int) $row['views'];
 				}
 			}
 		}
@@ -516,7 +573,7 @@ class Seyedcast_Stats {
 		self::ensure_table();
 
 		$table = self::table_name();
-		$today = current_time( 'Y-m-d' );
+		$today = self::local_date( 0 );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$today_row = $wpdb->get_row(
