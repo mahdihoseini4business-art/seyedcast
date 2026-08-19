@@ -126,7 +126,8 @@
 
 .seyedcast-stats__canvas {
 	position: relative;
-	min-height: 280px;
+	height: 320px;
+	min-height: 320px;
 }
 
 .seyedcast-stats__status {

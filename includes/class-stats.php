@@ -143,7 +143,33 @@ class Seyedcast_Stats {
 			self::create_table();
 			return;
 		}
+
+		global $wpdb;
+		$table  = self::table_name();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$column = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'episode_id'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( empty( $column ) ) {
+			update_option( self::TABLE_OPTION, '1', false );
+		}
+
 		self::upgrade_table();
+	}
+
+	/**
+	 * Whether daily stats table schema is usable.
+	 *
+	 * @return bool
+	 */
+	public static function schema_ready() {
+		if ( ! self::table_exists() ) {
+			return false;
+		}
+
+		global $wpdb;
+		$table  = self::table_name();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$column = $wpdb->get_results( "SHOW COLUMNS FROM {$table} LIKE 'episode_id'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return ! empty( $column );
 	}
 
 	/**
@@ -171,11 +197,12 @@ class Seyedcast_Stats {
 		}
 
 		$episodes_by_show = self::get_episodes_grouped_by_show();
+		$initial_chart    = self::get_daily_chart_data( 0, 30, self::view_mode(), 0 );
 
 		wp_enqueue_style( 'seyedcast-admin', SEYEDCAST_URL . 'admin/css/admin.css', array(), SEYEDCAST_VERSION );
 		wp_enqueue_script(
 			'chartjs',
-			SEYEDCAST_URL . 'admin/js/vendor/chart.umd.min.js',
+			SEYEDCAST_URL . 'admin/js/lib/chart.umd.min.js',
 			array(),
 			'4.4.1',
 			true
@@ -192,15 +219,17 @@ class Seyedcast_Stats {
 			'seyedcast-stats',
 			'seyedcastStats',
 			array(
-				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-				'nonce'    => wp_create_nonce( 'seyedcast_stats_chart' ),
-				'episodes' => $episodes_by_show,
-				'i18n'     => array(
+				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+				'nonce'        => wp_create_nonce( 'seyedcast_stats_chart' ),
+				'episodes'     => $episodes_by_show,
+				'initialChart' => $initial_chart,
+				'i18n'         => array(
 					'unique'         => __( 'بازدید یکتا', 'seyedcast' ),
 					'total'          => __( 'کل بازدید', 'seyedcast' ),
 					'loading'        => __( 'در حال بارگذاری…', 'seyedcast' ),
 					'error'          => __( 'خطا در بارگذاری آمار.', 'seyedcast' ),
-					'empty'          => __( 'داده‌ای برای این بازه یافت نشد.', 'seyedcast' ),
+					'chartMissing'   => __( 'کتابخانه نمودار بارگذاری نشد. صفحه را رفرش کنید یا افزونه را دوباره آپلود کنید.', 'seyedcast' ),
+					'empty'          => __( 'داده‌ای برای این بازه یافت نشد. چند صفحه پادکست/اپیزود باز کنید تا آمار ثبت شود.', 'seyedcast' ),
 					'scopeAllShows'  => __( 'همه پادکست‌ها', 'seyedcast' ),
 					'scopeShow'      => __( 'یک پادکست', 'seyedcast' ),
 					'scopeEpisode'   => __( 'یک اپیزود', 'seyedcast' ),
@@ -283,7 +312,7 @@ class Seyedcast_Stats {
 
 		if ( $is_unique ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query(
+			$result = $wpdb->query(
 				$wpdb->prepare(
 					"INSERT INTO {$table} (show_id, episode_id, view_date, unique_views, total_views)
 					VALUES (%d, %d, %s, 1, 1)
@@ -295,7 +324,7 @@ class Seyedcast_Stats {
 			);
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query(
+			$result = $wpdb->query(
 				$wpdb->prepare(
 					"INSERT INTO {$table} (show_id, episode_id, view_date, unique_views, total_views)
 					VALUES (%d, %d, %s, 0, 1)
@@ -305,6 +334,11 @@ class Seyedcast_Stats {
 					$date
 				)
 			);
+		}
+
+		if ( false === $result && ! self::schema_ready() ) {
+			update_option( self::TABLE_OPTION, '1', false );
+			self::upgrade_table();
 		}
 	}
 
@@ -557,10 +591,12 @@ class Seyedcast_Stats {
 			wp_send_json_error( array( 'message' => __( 'دسترسی غیرمجاز.', 'seyedcast' ) ), 403 );
 		}
 
-		$show_id    = isset( $_GET['show_id'] ) ? absint( $_GET['show_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$episode_id = isset( $_GET['episode_id'] ) ? absint( $_GET['episode_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$days       = isset( $_GET['days'] ) ? absint( $_GET['days'] ) : 30; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$mode       = isset( $_GET['mode'] ) ? sanitize_key( wp_unslash( $_GET['mode'] ) ) : 'unique'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified above.
+		$request    = wp_unslash( $_REQUEST );
+		$show_id    = isset( $request['show_id'] ) ? absint( $request['show_id'] ) : 0;
+		$episode_id = isset( $request['episode_id'] ) ? absint( $request['episode_id'] ) : 0;
+		$days       = isset( $request['days'] ) ? absint( $request['days'] ) : 30;
+		$mode       = isset( $request['mode'] ) ? sanitize_key( $request['mode'] ) : 'unique';
 
 		if ( $episode_id > 0 ) {
 			$post = get_post( $episode_id );
@@ -610,14 +646,14 @@ class Seyedcast_Stats {
 				)
 			);
 
-			$episodes[ $show_id ] = array();
+			$episodes[ (string) $show_id ] = array();
 			foreach ( $items as $episode ) {
 				$number = get_post_meta( $episode->ID, '_seyedcast_episode_number', true );
 				$label  = get_the_title( $episode );
 				if ( $number ) {
 					$label = sprintf( __( 'اپیزود %1$s — %2$s', 'seyedcast' ), $number, $label );
 				}
-				$episodes[ $show_id ][] = array(
+				$episodes[ (string) $show_id ][] = array(
 					'id'    => (int) $episode->ID,
 					'label' => $label,
 				);

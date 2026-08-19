@@ -19,7 +19,8 @@
 			return;
 		}
 
-		var list = (seyedcastStats.episodes && seyedcastStats.episodes[showId]) || [];
+		var episodesMap = seyedcastStats.episodes || {};
+		var list = episodesMap[showId] || episodesMap[String(showId)] || [];
 		if (!list.length) {
 			$episode.append(
 				$('<option>', { value: '0', text: seyedcastStats.i18n.noEpisodes })
@@ -104,17 +105,106 @@
 
 	function updatePeriodTotal(total, mode) {
 		var label = mode === 'total' ? seyedcastStats.i18n.total : seyedcastStats.i18n.unique;
-		var formatted = total.toLocaleString('fa-IR');
+		var formatted = Number(total || 0).toLocaleString('fa-IR');
 		$('#seyedcast_stats_period_total').text(label + ' در این بازه: ' + formatted);
 	}
 
-	function loadChart() {
-		if (typeof Chart === 'undefined') {
-			setStatus(seyedcastStats.i18n.error, true);
-			return;
+	function getChartConstructor() {
+		if (typeof window.Chart === 'function') {
+			return window.Chart;
+		}
+		if (window.chart && typeof window.chart === 'function') {
+			return window.chart;
+		}
+		return null;
+	}
+
+	function renderChart(data, mode) {
+		var ChartCtor = getChartConstructor();
+		if (!ChartCtor) {
+			setStatus(seyedcastStats.i18n.chartMissing, true);
+			return false;
 		}
 
+		var canvas = document.getElementById('seyedcast_stats_chart');
+		if (!canvas) {
+			return false;
+		}
+
+		var ctx = canvas.getContext('2d');
+		if (!ctx) {
+			setStatus(seyedcastStats.i18n.error, true);
+			return false;
+		}
+
+		var label = mode === 'total' ? seyedcastStats.i18n.total : seyedcastStats.i18n.unique;
+		var labels = (data && data.labels) ? data.labels : [];
+		var values = (data && data.values) ? data.values : [];
+
+		if (chart) {
+			chart.destroy();
+			chart = null;
+		}
+
+		chart = new ChartCtor(ctx, {
+			type: 'line',
+			data: {
+				labels: labels,
+				datasets: [{
+					label: label,
+					data: values,
+					borderColor: '#1DB954',
+					backgroundColor: 'rgba(29, 185, 84, 0.12)',
+					fill: true,
+					tension: 0.3,
+					pointRadius: values.length > 14 ? 0 : 3,
+					pointHoverRadius: 5,
+					borderWidth: 2
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				interaction: {
+					mode: 'index',
+					intersect: false
+				},
+				plugins: {
+					legend: {
+						display: true,
+						position: 'top'
+					},
+					tooltip: {
+						enabled: true
+					}
+				},
+				scales: {
+					x: {
+						display: true,
+						ticks: {
+							maxRotation: 0,
+							autoSkip: true,
+							maxTicksLimit: 12
+						}
+					},
+					y: {
+						beginAtZero: true,
+						display: true,
+						ticks: {
+							precision: 0
+						},
+						suggestedMax: Math.max(5, Math.max.apply(null, values.concat([0])) + 1)
+					}
+				}
+			}
+		});
+
+		return true;
+	}
+
+	function loadChart() {
 		var filters = getFilters();
+
 		if (!canLoadChart(filters)) {
 			if (chart) {
 				chart.destroy();
@@ -127,7 +217,12 @@
 
 		setStatus(seyedcastStats.i18n.loading, false);
 
-		$.getJSON(seyedcastStats.ajaxUrl, $.extend({ action: 'seyedcast_stats_chart', nonce: seyedcastStats.nonce }, filters))
+		$.ajax({
+			url: seyedcastStats.ajaxUrl,
+			method: 'POST',
+			dataType: 'json',
+			data: $.extend({ action: 'seyedcast_stats_chart', nonce: seyedcastStats.nonce }, filters)
+		})
 			.done(function (response) {
 				if (!response || !response.success || !response.data) {
 					setStatus(seyedcastStats.i18n.error, true);
@@ -135,54 +230,12 @@
 				}
 
 				var data = response.data;
-				setStatus(data.total === 0 ? seyedcastStats.i18n.empty : '', false);
+				setStatus(Number(data.total) === 0 ? seyedcastStats.i18n.empty : '', false);
 				updatePeriodTotal(data.total || 0, filters.mode);
 
-				var ctx = document.getElementById('seyedcast_stats_chart');
-				if (!ctx) {
+				if (!renderChart(data, filters.mode)) {
 					return;
 				}
-
-				var label = filters.mode === 'total' ? seyedcastStats.i18n.total : seyedcastStats.i18n.unique;
-
-				if (chart) {
-					chart.destroy();
-				}
-
-				chart = new Chart(ctx, {
-					type: 'line',
-					data: {
-						labels: data.labels || [],
-						datasets: [{
-							label: label,
-							data: data.values || [],
-							borderColor: '#1DB954',
-							backgroundColor: 'rgba(29, 185, 84, 0.12)',
-							fill: true,
-							tension: 0.3,
-							pointRadius: 3,
-							pointHoverRadius: 5
-						}]
-					},
-					options: {
-						responsive: true,
-						maintainAspectRatio: true,
-						plugins: {
-							legend: {
-								display: true,
-								position: 'top'
-							}
-						},
-						scales: {
-							y: {
-								beginAtZero: true,
-								ticks: {
-									precision: 0
-								}
-							}
-						}
-					}
-				});
 			})
 			.fail(function (xhr) {
 				var message = seyedcastStats.i18n.error;
@@ -200,6 +253,14 @@
 
 		syncScopeUi();
 
+		if (seyedcastStats.initialChart && getScope() === 'all_shows') {
+			updatePeriodTotal(seyedcastStats.initialChart.total || 0, $('#seyedcast_stats_mode').val() || 'unique');
+			renderChart(seyedcastStats.initialChart, $('#seyedcast_stats_mode').val() || 'unique');
+			if (Number(seyedcastStats.initialChart.total) === 0) {
+				setStatus(seyedcastStats.i18n.empty, false);
+			}
+		}
+
 		$('#seyedcast_stats_scope').on('change', function () {
 			syncScopeUi();
 			loadChart();
@@ -213,6 +274,9 @@
 		});
 
 		$('#seyedcast_stats_episode, #seyedcast_stats_days, #seyedcast_stats_mode').on('change', loadChart);
-		loadChart();
+
+		if (!seyedcastStats.initialChart || getScope() !== 'all_shows') {
+			loadChart();
+		}
 	});
 }(jQuery));
