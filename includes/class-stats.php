@@ -735,6 +735,9 @@ class Seyedcast_Stats {
 		);
 		$summary = self::get_summary();
 
+		$listen_show_id = isset( $_GET['listen_show'] ) ? absint( wp_unslash( $_GET['listen_show'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$listen_report  = Seyedcast_Listen_Stats::get_episodes_report( $listen_show_id );
+
 		include SEYEDCAST_PATH . 'admin/views/stats-page.php';
 	}
 

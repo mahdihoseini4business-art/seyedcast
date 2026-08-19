@@ -117,9 +117,12 @@ class Seyedcast_Assets {
 			'seyedcast-player',
 			'seyedcastPlayer',
 			array(
-				'storageKey' => 'seyedcast_player_state_v1',
-				'historyKey' => 'seyedcast_listen_history_v1',
-				'i18n'       => array(
+				'storageKey'     => 'seyedcast_player_state_v1',
+				'historyKey'     => 'seyedcast_listen_history_v1',
+				'listenerKey'    => 'seyedcast_listener_id_v1',
+				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+				'progressAction' => 'seyedcast_listen_progress',
+				'i18n'           => array(
 					'play'    => __( 'پخش', 'seyedcast' ),
 					'pause'   => __( 'توقف', 'seyedcast' ),
 					'close'   => __( 'بستن', 'seyedcast' ),

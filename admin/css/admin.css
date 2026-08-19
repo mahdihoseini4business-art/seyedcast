@@ -139,3 +139,54 @@
 	color: #b32d2e;
 }
 
+.seyedcast-stats__listen {
+	max-width: 960px;
+}
+
+.seyedcast-stats__listen-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.seyedcast-stats__listen-filter label {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-weight: 600;
+}
+
+.seyedcast-stats__listen-filter select {
+	min-width: 200px;
+}
+
+.seyedcast-stats__listen-table-wrap {
+	overflow-x: auto;
+}
+
+.seyedcast-stats__listen-table th,
+.seyedcast-stats__listen-table td {
+	vertical-align: middle;
+}
+
+.seyedcast-stats__listen-table td:last-child {
+	min-width: 160px;
+}
+
+.seyedcast-stats__listen-bar {
+	height: 8px;
+	border-radius: 999px;
+	background: #f0f0f1;
+	overflow: hidden;
+}
+
+.seyedcast-stats__listen-bar span {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: linear-gradient(90deg, #2271b1, #135e96);
+}
+

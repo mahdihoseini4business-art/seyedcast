@@ -28,6 +28,7 @@ class Seyedcast_Plugin {
 		new Seyedcast_Assets();
 		new Seyedcast_Templates();
 		new Seyedcast_Stats();
+		new Seyedcast_Listen_Stats();
 		new Seyedcast_App();
 		new Seyedcast_Pwa();
 		new Seyedcast_Shortcode();
@@ -44,6 +45,7 @@ class Seyedcast_Plugin {
 		flush_rewrite_rules();
 
 		Seyedcast_Stats::ensure_table();
+		Seyedcast_Listen_Stats::ensure_table();
 
 		Seyedcast_App::ensure_comments_board();
 

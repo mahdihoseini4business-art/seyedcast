@@ -5,6 +5,8 @@
  * @package Seyedcast
  * @var WP_Post[] $shows
  * @var array     $summary
+ * @var int       $listen_show_id
+ * @var array     $listen_report
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -94,6 +96,59 @@ $default_mode = Seyedcast_Stats::view_mode();
 		<div class="seyedcast-stats__canvas">
 			<canvas id="seyedcast_stats_chart" height="120"></canvas>
 		</div>
+	</div>
+
+	<div class="seyedcast-admin-card seyedcast-stats__listen">
+		<div class="seyedcast-stats__listen-head">
+			<strong><?php esc_html_e( 'میانگین درصد گوش داده‌شده', 'seyedcast' ); ?></strong>
+			<form method="get" action="" class="seyedcast-stats__listen-filter">
+				<input type="hidden" name="page" value="seyedcast-stats" />
+				<label for="seyedcast_listen_show">
+					<?php esc_html_e( 'فیلتر پادکست', 'seyedcast' ); ?>
+					<select id="seyedcast_listen_show" name="listen_show" onchange="this.form.submit()">
+						<option value="0" <?php selected( $listen_show_id, 0 ); ?>><?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?></option>
+						<?php foreach ( $shows as $show ) : ?>
+							<option value="<?php echo esc_attr( (string) $show->ID ); ?>" <?php selected( $listen_show_id, $show->ID ); ?>>
+								<?php echo esc_html( get_the_title( $show ) ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+				</label>
+			</form>
+		</div>
+
+		<?php if ( empty( $listen_report ) ) : ?>
+			<p class="description"><?php esc_html_e( 'هنوز داده‌ای ثبت نشده. پس از گوش دادن کاربران به اپیزودها، میانگین درصد اینجا نمایش داده می‌شود.', 'seyedcast' ); ?></p>
+		<?php else : ?>
+			<div class="seyedcast-stats__listen-table-wrap">
+				<table class="widefat striped seyedcast-stats__listen-table">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'اپیزود', 'seyedcast' ); ?></th>
+							<th><?php esc_html_e( 'پادکست', 'seyedcast' ); ?></th>
+							<th><?php esc_html_e( 'شنونده', 'seyedcast' ); ?></th>
+							<th><?php esc_html_e( 'میانگین', 'seyedcast' ); ?></th>
+							<th><?php esc_html_e( 'پیشرفت', 'seyedcast' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $listen_report as $row ) : ?>
+							<tr>
+								<td><?php echo esc_html( $row['episode_title'] ); ?></td>
+								<td><?php echo esc_html( $row['show_title'] ); ?></td>
+								<td><?php echo esc_html( number_format_i18n( (int) $row['count'] ) ); ?></td>
+								<td><?php echo esc_html( number_format_i18n( (int) $row['avg'] ) ); ?>%</td>
+								<td>
+									<div class="seyedcast-stats__listen-bar" aria-hidden="true">
+										<span style="width: <?php echo esc_attr( (string) min( 100, max( 0, (int) $row['avg'] ) ) ); ?>%"></span>
+									</div>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
 	</div>
 
 	<p class="description">

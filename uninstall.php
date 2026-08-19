@@ -10,6 +10,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-stats.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-listen-stats.php';
 
 global $wpdb;
 
@@ -32,6 +33,7 @@ $wpdb->query(
 );
 
 Seyedcast_Stats::drop_table();
+Seyedcast_Listen_Stats::drop_table();
 
 $show_ids = get_posts(
 	array(
@@ -64,6 +66,8 @@ foreach ( $episode_ids as $id ) {
 	delete_post_meta( $id, '_seyedcast_episode_number' );
 	delete_post_meta( $id, '_seyedcast_view_count' );
 	delete_post_meta( $id, '_seyedcast_total_view_count' );
+	delete_post_meta( $id, '_seyedcast_listen_sum_pct' );
+	delete_post_meta( $id, '_seyedcast_listen_count' );
 }
 
 flush_rewrite_rules();

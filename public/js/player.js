@@ -4,6 +4,9 @@
 	var cfg = window.seyedcastPlayer || {};
 	var storageKey = cfg.storageKey || 'seyedcast_player_state_v1';
 	var historyKey = cfg.historyKey || 'seyedcast_listen_history_v1';
+	var listenerKey = cfg.listenerKey || 'seyedcast_listener_id_v1';
+	var ajaxUrl = cfg.ajaxUrl || '';
+	var progressAction = cfg.progressAction || 'seyedcast_listen_progress';
 	var root = document.getElementById('seyedcast-sticky-player');
 	var audio = document.getElementById('seyedcast-audio');
 	if (!root || !audio) {
@@ -42,6 +45,10 @@
 		playing: false
 	};
 
+	var lastSentPct = 0;
+	var lastSentEpisodeId = 0;
+	var progressTimer = null;
+
 	function formatTime(sec) {
 		if (!isFinite(sec) || sec < 0) {
 			return '0:00';
@@ -74,6 +81,109 @@
 			);
 		} catch (e) {
 			/* ignore */
+		}
+	}
+
+	function generateListenerId() {
+		if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+			return window.crypto.randomUUID();
+		}
+		var hex = '';
+		for (var i = 0; i < 32; i++) {
+			hex += Math.floor(Math.random() * 16).toString(16);
+		}
+		return hex;
+	}
+
+	function getListenerId() {
+		try {
+			var id = localStorage.getItem(listenerKey);
+			if (id && /^[a-f0-9-]{32,36}$/i.test(id)) {
+				return id;
+			}
+			id = generateListenerId();
+			localStorage.setItem(listenerKey, id);
+			return id;
+		} catch (e) {
+			return generateListenerId();
+		}
+	}
+
+	function currentPct() {
+		if (!isFinite(audio.duration) || audio.duration <= 0) {
+			return 0;
+		}
+		return Math.min(100, Math.max(0, Math.round((audio.currentTime / audio.duration) * 100)));
+	}
+
+	function sendProgress(force) {
+		if (!ajaxUrl || !state.id) {
+			return;
+		}
+
+		var pct = currentPct();
+		if (!force && state.id === lastSentEpisodeId && pct <= lastSentPct) {
+			return;
+		}
+		if (!force && pct < 1) {
+			return;
+		}
+
+		lastSentPct = pct;
+		lastSentEpisodeId = state.id;
+
+		var params = new URLSearchParams();
+		params.set('action', progressAction);
+		params.set('episode_id', String(state.id));
+		params.set('pct', String(pct));
+		params.set('listener_id', getListenerId());
+
+		var body = params.toString();
+
+		if (force && navigator.sendBeacon) {
+			var blob = new Blob([body], { type: 'application/x-www-form-urlencoded' });
+			if (navigator.sendBeacon(ajaxUrl, blob)) {
+				return;
+			}
+		}
+
+		if (window.fetch) {
+			window
+				.fetch(ajaxUrl, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: body,
+					credentials: 'same-origin',
+					keepalive: true
+				})
+				.catch(function () {
+					/* ignore */
+				});
+		}
+	}
+
+	function scheduleProgressSync() {
+		if (progressTimer) {
+			return;
+		}
+		progressTimer = window.setTimeout(function () {
+			progressTimer = null;
+			sendProgress(false);
+		}, 20000);
+	}
+
+	function flushProgressSync(force) {
+		if (progressTimer) {
+			clearTimeout(progressTimer);
+			progressTimer = null;
+		}
+		sendProgress(!!force);
+	}
+
+	function resetProgressSync(episodeId) {
+		if (episodeId !== lastSentEpisodeId) {
+			lastSentPct = 0;
+			lastSentEpisodeId = 0;
 		}
 	}
 
@@ -315,6 +425,7 @@
 			audio.src = payload.audio;
 			audio.load();
 			setProgress(0);
+			resetProgressSync(payload.id || 0);
 		}
 
 		audio.playbackRate = state.rate || 1;
@@ -416,6 +527,7 @@
 		state.playing = false;
 		setPlayingUi(false);
 		save();
+		flushProgressSync(true);
 	});
 
 	audio.addEventListener('timeupdate', function () {
@@ -425,6 +537,7 @@
 		var pct = (audio.currentTime / audio.duration) * 100;
 		setProgress(pct);
 		setTimes(audio.currentTime, audio.duration);
+		scheduleProgressSync();
 	});
 
 	audio.addEventListener('loadedmetadata', function () {
@@ -435,10 +548,17 @@
 		setPlayingUi(false);
 		setProgress(100);
 		save();
+		flushProgressSync(true);
 	});
 
-	window.addEventListener('beforeunload', save);
-	window.addEventListener('pagehide', save);
+	window.addEventListener('beforeunload', function () {
+		save();
+		flushProgressSync(true);
+	});
+	window.addEventListener('pagehide', function () {
+		save();
+		flushProgressSync(true);
+	});
 
 	document.addEventListener('click', function (e) {
 		var trigger = e.target.closest('[data-seyedcast-play]');
