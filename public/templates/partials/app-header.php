@@ -46,6 +46,10 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 				placeholder="<?php esc_attr_e( 'جستجوی پادکست یا اپیزود…', 'seyedcast' ); ?>"
 				autocomplete="off"
 				enterkeyhint="search"
+				role="combobox"
+				aria-controls="seyedcast-search-results"
+				aria-expanded="false"
+				aria-autocomplete="list"
 			/>
 			<div class="seyedcast-app-search__results" id="seyedcast-search-results" hidden role="listbox"></div>
 		</div>

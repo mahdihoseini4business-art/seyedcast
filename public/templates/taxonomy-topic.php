@@ -36,7 +36,7 @@ ob_start();
 						?>
 						<a class="seyedcast-show-tile" href="<?php the_permalink(); ?>" data-seyedcast-nav>
 							<span class="seyedcast-show-tile__art">
-								<img src="<?php echo esc_url( $cover ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" />
+								<img src="<?php echo esc_url( $cover ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" width="300" height="300" loading="lazy" />
 								<span class="seyedcast-show-tile__play" aria-hidden="true"><span></span></span>
 							</span>
 							<span class="seyedcast-show-tile__title"><?php the_title(); ?></span>
@@ -49,7 +49,7 @@ ob_start();
 						?>
 						<article class="seyedcast-show-tile seyedcast-show-tile--episode">
 							<a class="seyedcast-show-tile__art" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
-								<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="" loading="lazy" />
+								<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="<?php echo esc_attr( $payload['title'] ); ?>" width="300" height="300" loading="lazy" />
 							</a>
 							<a class="seyedcast-show-tile__title" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav><?php echo esc_html( $payload['title'] ); ?></a>
 							<span class="seyedcast-show-tile__meta"><?php echo esc_html( $payload['show'] ); ?></span>

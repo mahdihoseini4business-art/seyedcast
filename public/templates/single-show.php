@@ -88,7 +88,7 @@ ob_start();
 					<li class="seyedcast-episode-row" data-episode-id="<?php echo esc_attr( (string) $payload['id'] ); ?>">
 						<span class="seyedcast-episode-row__index"><?php echo esc_html( (string) $i ); ?></span>
 						<a class="seyedcast-episode-row__cover" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
-							<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="" loading="lazy" />
+							<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="<?php echo esc_attr( $payload['title'] ); ?>" loading="lazy" />
 						</a>
 						<div class="seyedcast-episode-row__body">
 							<a href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav><strong><?php echo esc_html( $payload['title'] ); ?></strong></a>

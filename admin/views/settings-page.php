@@ -33,7 +33,7 @@ $shows = get_posts(
 $episodes = get_posts(
 	array(
 		'post_type'      => 'seyedcast_episode',
-		'posts_per_page' => 100,
+		'posts_per_page' => -1,
 		'orderby'        => 'date',
 		'order'          => 'DESC',
 		'post_status'    => array( 'publish', 'future', 'draft' ),
@@ -291,7 +291,7 @@ while ( count( $events ) < 3 ) {
 					</p>
 					<p>
 						<label><?php esc_html_e( 'تاریخ و ساعت پخش', 'seyedcast' ); ?></label><br />
-						<input type="datetime-local" name="seyedcast_settings[upcoming_events][<?php echo esc_attr( (string) $i ); ?>][starts_at]" value="<?php echo esc_attr( $event['starts_at'] ); ?>" />
+						<input type="datetime-local" name="seyedcast_settings[upcoming_events][<?php echo esc_attr( (string) $i ); ?>][starts_at]" value="<?php echo esc_attr( Seyedcast_Settings::format_event_datetime_local( $event['starts_at'] ) ); ?>" />
 					</p>
 				</div>
 			<?php endforeach; ?>

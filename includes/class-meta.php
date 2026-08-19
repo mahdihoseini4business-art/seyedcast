@@ -142,6 +142,9 @@ class Seyedcast_Meta {
 		}
 
 		$show_id = isset( $_POST['seyedcast_show_id'] ) ? absint( $_POST['seyedcast_show_id'] ) : 0;
+		if ( $show_id && ( ! get_post( $show_id ) || 'seyedcast_show' !== get_post_type( $show_id ) ) ) {
+			$show_id = 0;
+		}
 		$audio   = isset( $_POST['seyedcast_audio_id'] ) ? absint( $_POST['seyedcast_audio_id'] ) : 0;
 		$number  = isset( $_POST['seyedcast_episode_number'] ) ? sanitize_text_field( wp_unslash( $_POST['seyedcast_episode_number'] ) ) : '';
 		$duration = isset( $_POST['seyedcast_duration'] ) ? sanitize_text_field( wp_unslash( $_POST['seyedcast_duration'] ) ) : '';

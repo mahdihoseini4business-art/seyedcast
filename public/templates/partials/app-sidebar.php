@@ -28,7 +28,7 @@ $events = array_values(
 			if ( empty( $e['starts_at'] ) ) {
 				return false;
 			}
-			$ts = strtotime( $e['starts_at'] );
+			$ts = Seyedcast_Settings::parse_event_datetime( $e['starts_at'] );
 			return $ts && $ts > ( $now - DAY_IN_SECONDS );
 		}
 	)
@@ -43,7 +43,7 @@ $events = array_values(
 			<ul class="seyedcast-premiere-list">
 				<?php foreach ( $events as $event ) : ?>
 					<?php
-					$ts    = strtotime( $event['starts_at'] );
+					$ts    = Seyedcast_Settings::parse_event_datetime( $event['starts_at'] );
 					$title = ! empty( $event['title'] ) ? $event['title'] : '';
 					$url   = '';
 					if ( ! empty( $event['episode_id'] ) ) {

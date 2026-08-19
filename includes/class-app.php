@@ -25,6 +25,7 @@ class Seyedcast_App {
 	 */
 	public function __construct() {
 		add_action( 'template_redirect', array( $this, 'maybe_track_view' ), 20 );
+		add_action( 'admin_init', array( __CLASS__, 'admin_ensure_comments_board' ) );
 		add_action( 'wp_ajax_seyedcast_search', array( $this, 'ajax_search' ) );
 		add_action( 'wp_ajax_nopriv_seyedcast_search', array( $this, 'ajax_search' ) );
 		add_action( 'wp_ajax_seyedcast_suggest', array( $this, 'ajax_suggest' ) );
@@ -108,7 +109,7 @@ class Seyedcast_App {
 	 * Increment show/episode view counts (unique throttled per visitor).
 	 */
 	public function maybe_track_view() {
-		if ( is_admin() || wp_doing_ajax() ) {
+		if ( is_admin() || wp_doing_ajax() || self::is_partial_request() ) {
 			return;
 		}
 
@@ -131,20 +132,12 @@ class Seyedcast_App {
 			$show_id    = Seyedcast_Meta::get_show_id( $episode_id );
 		}
 
-		// Episode page: count episode (and parent show as a page view of that show).
+		// Episode page: count episode view only (show views are tracked on show pages).
 		if ( $episode_id > 0 ) {
 			$is_unique_ep = ! self::has_recent_unique_view( 'episode', $episode_id );
 			Seyedcast_Stats::record_episode_view( $episode_id, $is_unique_ep );
 			if ( $is_unique_ep ) {
 				self::mark_unique_view( 'episode', $episode_id );
-			}
-
-			if ( $show_id > 0 ) {
-				$is_unique_show = ! self::has_recent_unique_view( 'show', $show_id );
-				Seyedcast_Stats::record_show_view( $show_id, $is_unique_show );
-				if ( $is_unique_show ) {
-					self::mark_unique_view( 'show', $show_id );
-				}
 			}
 			return;
 		}
@@ -362,6 +355,8 @@ class Seyedcast_App {
 	 * AJAX search shows and episodes by title.
 	 */
 	public function ajax_search() {
+		self::rate_limit_ajax( 'search' );
+
 		$q = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$q = trim( $q );
 
@@ -382,9 +377,9 @@ class Seyedcast_App {
 		foreach ( $shows as $show ) {
 			$items[] = array(
 				'type'  => 'show',
-				'title' => get_the_title( $show ),
-				'url'   => get_permalink( $show ),
-				'cover' => Seyedcast_Templates::cover_url( $show->ID ),
+				'title' => wp_strip_all_tags( get_the_title( $show ) ),
+				'url'   => esc_url_raw( get_permalink( $show ) ),
+				'cover' => esc_url_raw( Seyedcast_Templates::cover_url( $show->ID ) ),
 				'meta'  => __( 'پادکست', 'seyedcast' ),
 			);
 		}
@@ -401,10 +396,10 @@ class Seyedcast_App {
 			$payload = Seyedcast_Templates::episode_payload( $episode );
 			$items[] = array(
 				'type'  => 'episode',
-				'title' => $payload['title'],
-				'url'   => $payload['permalink'],
-				'cover' => $payload['cover'],
-				'meta'  => $payload['show'] ? $payload['show'] : __( 'اپیزود', 'seyedcast' ),
+				'title' => wp_strip_all_tags( $payload['title'] ),
+				'url'   => esc_url_raw( $payload['permalink'] ),
+				'cover' => esc_url_raw( $payload['cover'] ),
+				'meta'  => wp_strip_all_tags( $payload['show'] ? $payload['show'] : __( 'اپیزود', 'seyedcast' ) ),
 			);
 		}
 
@@ -415,6 +410,8 @@ class Seyedcast_App {
 	 * Suggest related shows from recent listen history (show IDs).
 	 */
 	public function ajax_suggest() {
+		self::rate_limit_ajax( 'suggest' );
+
 		$raw = isset( $_GET['ids'] ) ? sanitize_text_field( wp_unslash( $_GET['ids'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$ids = array_values(
 			array_filter(
@@ -484,7 +481,10 @@ class Seyedcast_App {
 					'posts_per_page' => $limit - count( $related ),
 					'post__not_in'   => array_merge( $exclude, $found_ids, array( 0 ) ),
 					'meta_key'       => self::VIEW_META,
-					'orderby'        => 'meta_value_num date',
+					'orderby'        => array(
+						'meta_value_num' => 'DESC',
+						'date'           => 'DESC',
+					),
 					'order'          => 'DESC',
 				)
 			);
@@ -496,9 +496,9 @@ class Seyedcast_App {
 			$count   = count( Seyedcast_Meta::get_show_episodes( $show->ID ) );
 			$items[] = array(
 				'id'    => (int) $show->ID,
-				'title' => get_the_title( $show ),
-				'url'   => get_permalink( $show ),
-				'cover' => Seyedcast_Templates::cover_url( $show->ID ),
+				'title' => wp_strip_all_tags( get_the_title( $show ) ),
+				'url'   => esc_url_raw( get_permalink( $show ) ),
+				'cover' => esc_url_raw( Seyedcast_Templates::cover_url( $show->ID ) ),
 				'meta'  => sprintf( _n( '%s اپیزود', '%s اپیزود', $count, 'seyedcast' ), number_format_i18n( $count ) ),
 			);
 		}
@@ -517,19 +517,44 @@ class Seyedcast_App {
 		}
 
 		$id = (int) get_option( self::BOARD_OPTION, 0 );
-		if ( $id ) {
-			$post = get_post( $id );
-			if ( $post && 'trash' !== $post->post_status ) {
-				if ( 'closed' === $post->comment_status ) {
-					wp_update_post(
-						array(
-							'ID'             => $id,
-							'comment_status' => 'open',
-						)
-					);
-				}
-				return $id;
+		if ( ! $id ) {
+			return 0;
+		}
+
+		$post = get_post( $id );
+		if ( ! $post || 'trash' === $post->post_status ) {
+			return 0;
+		}
+
+		return $id;
+	}
+
+	/**
+	 * Create comments board page (admin / activation only).
+	 *
+	 * @return int
+	 */
+	public static function ensure_comments_board() {
+		$settings = Seyedcast_Settings::get();
+		if ( empty( $settings['comments_enabled'] ) ) {
+			return 0;
+		}
+
+		$existing = self::get_comments_board_id();
+		if ( $existing ) {
+			if ( 'closed' === get_post( $existing )->comment_status ) {
+				wp_update_post(
+					array(
+						'ID'             => $existing,
+						'comment_status' => 'open',
+					)
+				);
 			}
+			return $existing;
+		}
+
+		if ( ! current_user_can( 'edit_pages' ) ) {
+			return 0;
 		}
 
 		$page_id = wp_insert_post(
@@ -555,6 +580,15 @@ class Seyedcast_App {
 	}
 
 	/**
+	 * Ensure comments board exists when an admin loads wp-admin.
+	 */
+	public static function admin_ensure_comments_board() {
+		if ( current_user_can( 'edit_pages' ) ) {
+			self::ensure_comments_board();
+		}
+	}
+
+	/**
 	 * Force comments open/closed for podcast surfaces based on settings.
 	 *
 	 * @param bool $open    Whether open.
@@ -571,7 +605,30 @@ class Seyedcast_App {
 			return $open;
 		}
 
-		return ! empty( $settings['comments_enabled'] );
+		if ( empty( $settings['comments_enabled'] ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Simple AJAX rate limit per IP.
+	 *
+	 * @param string $action Action key.
+	 * @param int    $limit  Max requests.
+	 * @param int    $window Window in seconds.
+	 */
+	private static function rate_limit_ajax( $action, $limit = 40, $window = 60 ) {
+		$ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) : 'unknown';
+		$key = 'seyedcast_rl_' . md5( $action . '|' . $ip );
+		$hit = (int) get_transient( $key );
+
+		if ( $hit >= $limit ) {
+			wp_send_json_error( array( 'message' => __( 'درخواست‌های زیاد. کمی بعد دوباره تلاش کنید.', 'seyedcast' ) ), 429 );
+		}
+
+		set_transient( $key, $hit + 1, $window );
 	}
 
 	/**
@@ -646,6 +703,7 @@ class Seyedcast_App {
 					?>
 				</div>
 			</article>
+		</<?php echo esc_html( $tag ); ?>>
 		<?php
 	}
 }

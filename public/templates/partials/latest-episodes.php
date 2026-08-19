@@ -27,7 +27,7 @@ if ( ! $episodes ) {
 			?>
 			<article class="seyedcast-latest-card">
 				<a class="seyedcast-latest-card__art" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
-					<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="" loading="lazy" />
+					<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="<?php echo esc_attr( $payload['title'] ); ?>" loading="lazy" />
 				</a>
 				<a class="seyedcast-latest-card__title" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
 					<?php echo esc_html( $payload['title'] ); ?>

@@ -15,6 +15,7 @@ $mode     = isset( $settings['featured_mode'] ) ? $settings['featured_mode'] : '
 
 $featured_badge = ( 'manual' === $mode ) ? __( 'انتخاب سردبیر', 'seyedcast' ) : __( 'پربازدیدترین', 'seyedcast' );
 $slides         = array();
+$seen_ids       = array();
 
 $featured = Seyedcast_App::banner_slide_from_show(
 	Seyedcast_App::get_featured_show(),
@@ -22,7 +23,8 @@ $featured = Seyedcast_App::banner_slide_from_show(
 	'featured'
 );
 if ( $featured ) {
-	$slides[] = $featured;
+	$slides[]   = $featured;
+	$seen_ids[] = (int) $featured['id'];
 }
 
 $newest = Seyedcast_App::banner_slide_from_show(
@@ -30,7 +32,7 @@ $newest = Seyedcast_App::banner_slide_from_show(
 	__( 'جدیدترین', 'seyedcast' ),
 	'newest'
 );
-if ( $newest ) {
+if ( $newest && ! in_array( (int) $newest['id'], $seen_ids, true ) ) {
 	$slides[] = $newest;
 }
 

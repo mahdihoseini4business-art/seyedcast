@@ -301,14 +301,15 @@ class Seyedcast_Settings {
 					if ( $count >= 5 || ! is_array( $event ) ) {
 						break;
 					}
-					$starts = isset( $event['starts_at'] ) ? sanitize_text_field( $event['starts_at'] ) : '';
-					if ( ! $starts ) {
+					$starts_raw = isset( $event['starts_at'] ) ? sanitize_text_field( $event['starts_at'] ) : '';
+					$starts_ts  = self::parse_event_datetime( $starts_raw );
+					if ( ! $starts_ts ) {
 						continue;
 					}
 					$out['upcoming_events'][] = array(
 						'title'      => isset( $event['title'] ) ? sanitize_text_field( $event['title'] ) : '',
 						'episode_id' => isset( $event['episode_id'] ) ? absint( $event['episode_id'] ) : 0,
-						'starts_at'  => $starts,
+						'starts_at'  => (string) $starts_ts,
 					);
 					$count++;
 				}
@@ -368,5 +369,37 @@ class Seyedcast_Settings {
 		$settings = self::get();
 		$presets  = self::presets();
 		include SEYEDCAST_PATH . 'admin/views/settings-page.php';
+	}
+
+	/**
+	 * Parse stored event datetime to Unix timestamp.
+	 *
+	 * @param string|int $raw Raw value.
+	 * @return int
+	 */
+	public static function parse_event_datetime( $raw ) {
+		$raw = trim( (string) $raw );
+		if ( '' === $raw ) {
+			return 0;
+		}
+		if ( is_numeric( $raw ) ) {
+			return (int) $raw;
+		}
+		$dt = date_create( $raw, wp_timezone() );
+		return $dt ? (int) $dt->getTimestamp() : 0;
+	}
+
+	/**
+	 * Format event timestamp for datetime-local input.
+	 *
+	 * @param string|int $raw Raw value.
+	 * @return string
+	 */
+	public static function format_event_datetime_local( $raw ) {
+		$ts = self::parse_event_datetime( $raw );
+		if ( ! $ts ) {
+			return is_string( $raw ) ? $raw : '';
+		}
+		return wp_date( 'Y-m-d\TH:i', $ts );
 	}
 }

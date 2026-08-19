@@ -40,6 +40,9 @@ ob_start();
 		</div>
 	</section>
 
+	<?php Seyedcast_Templates::partial( 'latest-episodes' ); ?>
+	<?php Seyedcast_Templates::partial( 'continue-listening' ); ?>
+
 	<?php Seyedcast_Templates::partial( 'suggested-for-you' ); ?>
 
 	<?php

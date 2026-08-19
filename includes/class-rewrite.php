@@ -43,6 +43,12 @@ class Seyedcast_Rewrite {
 		$base = self::base_slug();
 
 		add_rewrite_rule(
+			'^' . $base . '/episode/([^/]+)/?$',
+			'index.php?seyedcast_episode=$matches[1]',
+			'top'
+		);
+
+		add_rewrite_rule(
 			'^' . $base . '/([^/]+)/([^/]+)/?$',
 			'index.php?seyedcast_episode=$matches[2]&seyedcast_show_slug=$matches[1]',
 			'top'
@@ -81,7 +87,7 @@ class Seyedcast_Rewrite {
 		$show_id = Seyedcast_Meta::get_show_id( $post->ID );
 		$show    = $show_id ? get_post( $show_id ) : null;
 		if ( ! $show || 'seyedcast_show' !== $show->post_type ) {
-			return home_url( user_trailingslashit( self::base_slug() . '/' . $post->post_name ) );
+			return home_url( user_trailingslashit( self::base_slug() . '/episode/' . $post->post_name ) );
 		}
 
 		return home_url( user_trailingslashit( self::base_slug() . '/' . $show->post_name . '/' . $post->post_name ) );

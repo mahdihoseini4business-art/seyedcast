@@ -69,12 +69,6 @@
 				showPrompt((cfg.i18n && cfg.i18n.iosHint) || '');
 			}, 1800);
 		}
-	} else {
-		window.setTimeout(function () {
-			if (!deferredPrompt && !dismissed()) {
-				showPrompt();
-			}
-		}, 2500);
 	}
 
 	if (installBtn) {

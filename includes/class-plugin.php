@@ -45,6 +45,8 @@ class Seyedcast_Plugin {
 
 		Seyedcast_Stats::ensure_table();
 
+		Seyedcast_App::ensure_comments_board();
+
 		$defaults = Seyedcast_Settings::defaults();
 		if ( false === get_option( 'seyedcast_settings' ) ) {
 			add_option( 'seyedcast_settings', $defaults );

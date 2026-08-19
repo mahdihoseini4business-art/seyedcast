@@ -181,7 +181,23 @@ class Seyedcast_Pwa {
 				return $url;
 			}
 		}
-		return SEYEDCAST_URL . 'assets/icons/icon-' . (int) $size . '.png';
+
+		$png = SEYEDCAST_PATH . 'assets/icons/icon-' . (int) $size . '.png';
+		if ( is_readable( $png ) ) {
+			return SEYEDCAST_URL . 'assets/icons/icon-' . (int) $size . '.png';
+		}
+
+		return SEYEDCAST_URL . 'assets/icons/cover-placeholder.svg';
+	}
+
+	/**
+	 * MIME type for manifest icon URL.
+	 *
+	 * @param string $url Icon URL.
+	 * @return string
+	 */
+	private function icon_mime( $url ) {
+		return ( false !== strpos( $url, '.svg' ) ) ? 'image/svg+xml' : 'image/png';
 	}
 
 	/**
@@ -195,13 +211,15 @@ class Seyedcast_Pwa {
 		$settings = Seyedcast_Settings::get();
 		$base     = Seyedcast_Rewrite::base_slug();
 		$start    = home_url( user_trailingslashit( $base ) );
+		$icon192  = $this->icon_url( 192 );
+		$icon512  = $this->icon_url( 512 );
 
 		$manifest = array(
 			'name'             => $settings['pwa_name'],
 			'short_name'       => $settings['pwa_short_name'],
 			'description'      => $settings['archive_title'],
 			'start_url'        => $start,
-			'scope'            => home_url( '/' ),
+			'scope'            => $start,
 			'display'          => 'standalone',
 			'orientation'      => 'portrait-primary',
 			'background_color' => $settings['pwa_bg_color'],
@@ -210,15 +228,15 @@ class Seyedcast_Pwa {
 			'dir'              => 'rtl',
 			'icons'            => array(
 				array(
-					'src'   => $this->icon_url( 192 ),
-					'sizes' => '192x192',
-					'type'  => 'image/png',
+					'src'     => $icon192,
+					'sizes'   => '192x192',
+					'type'    => $this->icon_mime( $icon192 ),
 					'purpose' => 'any maskable',
 				),
 				array(
-					'src'   => $this->icon_url( 512 ),
-					'sizes' => '512x512',
-					'type'  => 'image/png',
+					'src'     => $icon512,
+					'sizes'   => '512x512',
+					'type'    => $this->icon_mime( $icon512 ),
 					'purpose' => 'any maskable',
 				),
 			),
@@ -243,7 +261,7 @@ class Seyedcast_Pwa {
 			SEYEDCAST_URL . 'public/css/themes.css',
 			SEYEDCAST_URL . 'public/css/player.css',
 			SEYEDCAST_URL . 'public/js/player.js',
-			SEYEDCAST_URL . 'assets/icons/icon-192.png',
+			$this->icon_url( 192 ),
 			SEYEDCAST_URL . 'assets/icons/cover-placeholder.svg',
 		);
 
@@ -258,7 +276,9 @@ class Seyedcast_Pwa {
 		echo 'const CACHE = ' . $cache_js . ";\n";
 		echo 'const ASSETS = ' . $assets_json . ";\n";
 		echo "self.addEventListener('install', function(event) {\n";
-		echo "  event.waitUntil(caches.open(CACHE).then(function(cache) { return cache.addAll(ASSETS); }).then(function() { return self.skipWaiting(); }));\n";
+		echo "  event.waitUntil(caches.open(CACHE).then(function(cache) {\n";
+		echo "    return Promise.allSettled(ASSETS.map(function(url) { return cache.add(url); }));\n";
+		echo "  }).then(function() { return self.skipWaiting(); }));\n";
 		echo "});\n";
 		echo "self.addEventListener('activate', function(event) {\n";
 		echo "  event.waitUntil(caches.keys().then(function(keys) {\n";

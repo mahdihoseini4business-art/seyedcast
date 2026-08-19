@@ -11,7 +11,25 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-stats.php';
 
+global $wpdb;
+
+$board_id = (int) get_option( 'seyedcast_comments_board_id', 0 );
+
 delete_option( 'seyedcast_settings' );
+delete_option( 'seyedcast_comments_board_id' );
+
+if ( $board_id ) {
+	wp_delete_post( $board_id, true );
+}
+
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+$wpdb->query(
+	$wpdb->prepare(
+		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+		$wpdb->esc_like( '_transient_seyedcast_' ) . '%',
+		$wpdb->esc_like( '_transient_timeout_seyedcast_' ) . '%'
+	)
+);
 
 Seyedcast_Stats::drop_table();
 
