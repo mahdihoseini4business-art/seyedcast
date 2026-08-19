@@ -17,7 +17,8 @@ class Seyedcast_App {
 	const VIEW_META           = '_seyedcast_view_count';
 	const VIEW_COOKIE         = 'seyedcast_viewed_';
 	const EPISODE_VIEW_COOKIE = 'seyedcast_viewed_ep_';
-	const BOARD_OPTION = 'seyedcast_comments_board_id';
+	const VIEW_THROTTLE       = 6 * HOUR_IN_SECONDS;
+	const BOARD_OPTION        = 'seyedcast_comments_board_id';
 
 	/**
 	 * Constructor.
@@ -104,7 +105,7 @@ class Seyedcast_App {
 	}
 
 	/**
-	 * Increment show view count (throttled per visitor).
+	 * Increment show/episode view counts (unique throttled per visitor).
 	 */
 	public function maybe_track_view() {
 		if ( is_admin() || wp_doing_ajax() ) {
@@ -130,25 +131,114 @@ class Seyedcast_App {
 			$show_id    = Seyedcast_Meta::get_show_id( $episode_id );
 		}
 
-		if ( $show_id > 0 ) {
-			$cookie_show    = self::VIEW_COOKIE . $show_id;
-			$is_unique_show = ! isset( $_COOKIE[ $cookie_show ] );
-			Seyedcast_Stats::record_show_view( $show_id, $is_unique_show );
-
-			if ( $is_unique_show ) {
-				setcookie( $cookie_show, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
-			}
-		}
-
+		// Episode page: count episode (and parent show as a page view of that show).
 		if ( $episode_id > 0 ) {
-			$cookie_ep    = self::EPISODE_VIEW_COOKIE . $episode_id;
-			$is_unique_ep = ! isset( $_COOKIE[ $cookie_ep ] );
+			$is_unique_ep = ! self::has_recent_unique_view( 'episode', $episode_id );
 			Seyedcast_Stats::record_episode_view( $episode_id, $is_unique_ep );
-
 			if ( $is_unique_ep ) {
-				setcookie( $cookie_ep, '1', time() + 6 * HOUR_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+				self::mark_unique_view( 'episode', $episode_id );
+			}
+
+			if ( $show_id > 0 ) {
+				$is_unique_show = ! self::has_recent_unique_view( 'show', $show_id );
+				Seyedcast_Stats::record_show_view( $show_id, $is_unique_show );
+				if ( $is_unique_show ) {
+					self::mark_unique_view( 'show', $show_id );
+				}
+			}
+			return;
+		}
+
+		if ( $show_id > 0 ) {
+			$is_unique_show = ! self::has_recent_unique_view( 'show', $show_id );
+			Seyedcast_Stats::record_show_view( $show_id, $is_unique_show );
+			if ( $is_unique_show ) {
+				self::mark_unique_view( 'show', $show_id );
 			}
 		}
+	}
+
+	/**
+	 * Cookie name for unique-view throttle.
+	 *
+	 * @param string $type show|episode.
+	 * @param int    $id   Post ID.
+	 * @return string
+	 */
+	private static function unique_cookie_name( $type, $id ) {
+		$prefix = ( 'episode' === $type ) ? self::EPISODE_VIEW_COOKIE : self::VIEW_COOKIE;
+		return $prefix . absint( $id );
+	}
+
+	/**
+	 * Server-side fingerprint key (cookie fallback).
+	 *
+	 * @param string $type show|episode.
+	 * @param int    $id   Post ID.
+	 * @return string
+	 */
+	private static function unique_fingerprint_key( $type, $id ) {
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) : '';
+		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : '';
+		$hash = md5( $type . '|' . absint( $id ) . '|' . $ip . '|' . substr( $ua, 0, 120 ) );
+		return 'seyedcast_uv_' . $hash;
+	}
+
+	/**
+	 * Whether this visitor already counted as unique recently.
+	 *
+	 * Uses cookie first, then a short-lived transient fingerprint so unique
+	 * counting still works when cookies are blocked or Set-Cookie fails.
+	 *
+	 * @param string $type show|episode.
+	 * @param int    $id   Post ID.
+	 * @return bool
+	 */
+	private static function has_recent_unique_view( $type, $id ) {
+		$cookie = self::unique_cookie_name( $type, $id );
+		if ( ! empty( $_COOKIE[ $cookie ] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			return true;
+		}
+
+		return (bool) get_transient( self::unique_fingerprint_key( $type, $id ) );
+	}
+
+	/**
+	 * Mark visitor as already counted for unique views.
+	 *
+	 * @param string $type show|episode.
+	 * @param int    $id   Post ID.
+	 */
+	private static function mark_unique_view( $type, $id ) {
+		$cookie  = self::unique_cookie_name( $type, $id );
+		$expire  = time() + self::VIEW_THROTTLE;
+		$path    = '/';
+		$secure  = is_ssl();
+		$domain  = '';
+
+		if ( ! headers_sent() ) {
+			if ( PHP_VERSION_ID >= 70300 ) {
+				setcookie(
+					$cookie,
+					'1',
+					array(
+						'expires'  => $expire,
+						'path'     => $path,
+						'domain'   => $domain,
+						'secure'   => $secure,
+						'httponly' => true,
+						'samesite' => 'Lax',
+					)
+				);
+			} else {
+				setcookie( $cookie, '1', $expire, $path, $domain, $secure, true );
+			}
+		}
+
+		// Available for the rest of this request.
+		$_COOKIE[ $cookie ] = '1';
+
+		set_transient( self::unique_fingerprint_key( $type, $id ), 1, self::VIEW_THROTTLE );
 	}
 
 	/**
