@@ -361,7 +361,7 @@ body.seyedcast-preset-soundcloud .seyedcast-btn--play {
 	border-radius: 12px;
 }
 
-/* PWA prompt */
+/* PWA install toast */
 .seyedcast-pwa-prompt {
 	position: fixed;
 	inset-inline: 0;
@@ -379,10 +379,13 @@ body.seyedcast-preset-soundcloud .seyedcast-btn--play {
 	pointer-events: auto;
 	max-width: 420px;
 	margin: 0 auto;
-	display: flex;
-	flex-direction: column;
-	gap: 0.8rem;
-	padding: 1rem 1.1rem;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	grid-template-areas:
+		"icon text close"
+		"actions actions actions";
+	gap: 0.55rem 0.75rem;
+	padding: 0.85rem 0.9rem;
 	border-radius: 16px;
 	background: color-mix(in srgb, var(--sc-surface, #181818) 94%, transparent);
 	backdrop-filter: blur(16px);
@@ -393,6 +396,45 @@ body.seyedcast-preset-soundcloud .seyedcast-btn--play {
 	font-family: inherit;
 	line-height: 1.6;
 	animation: seyedcast-slide-up 0.45s var(--sc-ease) both;
+}
+
+.seyedcast-pwa-prompt__icon {
+	grid-area: icon;
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
+	object-fit: cover;
+	align-self: start;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.seyedcast-pwa-prompt__text {
+	grid-area: text;
+	min-width: 0;
+}
+
+.seyedcast-pwa-prompt__close {
+	grid-area: close;
+	align-self: start;
+	justify-self: end;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	opacity: 0.72;
+	font-size: 1.35rem;
+	line-height: 1;
+	cursor: pointer;
+	font-family: inherit;
+}
+
+.seyedcast-pwa-prompt__close:hover,
+.seyedcast-pwa-prompt__close:focus-visible {
+	opacity: 1;
+	background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 body.seyedcast-preset-apple .seyedcast-pwa-prompt__card,
@@ -416,6 +458,7 @@ body.seyedcast-preset-soundcloud .seyedcast-pwa-prompt__card {
 }
 
 .seyedcast-pwa-prompt__actions {
+	grid-area: actions;
 	display: flex;
 	gap: 0.5rem;
 	flex-wrap: wrap;

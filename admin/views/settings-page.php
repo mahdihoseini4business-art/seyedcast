@@ -313,7 +313,7 @@ while ( count( $events ) < 3 ) {
 					<td>
 						<label>
 							<input type="checkbox" name="seyedcast_settings[pwa_prompt]" value="1" <?php checked( ! empty( $settings['pwa_prompt'] ) ); ?> />
-							<?php esc_html_e( 'نمایش بنر «افزودن به صفحه اصلی» در صفحات پادکست', 'seyedcast' ); ?>
+							<?php esc_html_e( 'نمایش toast «افزودن به صفحه اصلی» در موبایل (Android و iOS)', 'seyedcast' ); ?>
 						</label>
 					</td>
 				</tr>

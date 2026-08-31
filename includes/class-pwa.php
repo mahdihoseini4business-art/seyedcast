@@ -116,13 +116,17 @@ class Seyedcast_Pwa {
 			array(
 				'swUrl'      => home_url( '/seyedcast-sw.js' ),
 				'storageKey' => 'seyedcast_pwa_prompt_dismissed',
+				'iconUrl'    => $this->icon_url( 192 ),
+				'delayMs'    => 1500,
 				'isIos'      => $this->is_ios(),
 				'i18n'       => array(
-					'title'   => __( 'نصب Seyedcast', 'seyedcast' ),
-					'message' => __( 'برای دسترسی سریع‌تر، به صفحه اصلی اضافه کنید.', 'seyedcast' ),
-					'install' => __( 'افزودن به صفحه اصلی', 'seyedcast' ),
-					'later'   => __( 'بعداً', 'seyedcast' ),
-					'iosHint' => __( 'در Safari روی Share بزنید و Add to Home Screen را انتخاب کنید.', 'seyedcast' ),
+					'title'       => __( 'نصب روی موبایل', 'seyedcast' ),
+					'message'     => __( 'برای دسترسی سریع‌تر، پادکست را به صفحه اصلی گوشی اضافه کنید.', 'seyedcast' ),
+					'install'     => __( 'افزودن به صفحه اصلی', 'seyedcast' ),
+					'later'       => __( 'بعداً', 'seyedcast' ),
+					'close'       => __( 'بستن', 'seyedcast' ),
+					'iosHint'     => __( 'در Safari دکمه Share (مربع با فلش) را بزنید، سپس «Add to Home Screen» را انتخاب کنید.', 'seyedcast' ),
+					'androidHint' => __( 'منوی مرورگر (⋮) را باز کنید و «نصب برنامه» یا «افزودن به صفحه اصلی» را بزنید.', 'seyedcast' ),
 				),
 			)
 		);
@@ -137,15 +141,19 @@ class Seyedcast_Pwa {
 			return;
 		}
 		?>
-		<div id="seyedcast-pwa-prompt" class="seyedcast-pwa-prompt" hidden dir="rtl">
+		<div id="seyedcast-pwa-prompt" class="seyedcast-pwa-prompt" hidden dir="rtl" role="status" aria-live="polite">
 			<div class="seyedcast-pwa-prompt__card">
+				<img class="seyedcast-pwa-prompt__icon" src="" alt="" width="44" height="44" loading="lazy" decoding="async" />
 				<div class="seyedcast-pwa-prompt__text">
 					<strong class="seyedcast-pwa-prompt__title"></strong>
 					<p class="seyedcast-pwa-prompt__message"></p>
 				</div>
+				<button type="button" class="seyedcast-pwa-prompt__close" data-action="dismiss" aria-label="<?php esc_attr_e( 'بستن', 'seyedcast' ); ?>">
+					<span aria-hidden="true">&times;</span>
+				</button>
 				<div class="seyedcast-pwa-prompt__actions">
 					<button type="button" class="seyedcast-btn seyedcast-btn--primary" data-action="install"></button>
-					<button type="button" class="seyedcast-btn" data-action="dismiss"></button>
+					<button type="button" class="seyedcast-btn" data-action="dismiss-secondary"></button>
 				</div>
 			</div>
 		</div>
