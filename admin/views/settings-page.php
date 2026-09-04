@@ -335,6 +335,9 @@ while ( count( $events ) < 3 ) {
 							<input type="checkbox" name="seyedcast_settings[pwa_prompt]" value="1" <?php checked( ! empty( $settings['pwa_prompt'] ) ); ?> />
 							<?php esc_html_e( 'نمایش toast «افزودن به صفحه اصلی» در موبایل (Android و iOS)', 'seyedcast' ); ?>
 						</label>
+						<p class="description">
+							<?php esc_html_e( 'اگر اپ از قبل روی Home Screen نصب شده باشد، به‌جای این پیام، هنگام باز شدن اپ toast «پادکست جدید اومد» برای اپیزود تازه نشان داده می‌شود.', 'seyedcast' ); ?>
+						</p>
 					</td>
 				</tr>
 				<tr>
