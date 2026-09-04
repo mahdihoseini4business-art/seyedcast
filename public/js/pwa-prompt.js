@@ -123,7 +123,8 @@
 	}
 
 	if ('serviceWorker' in navigator && cfg.swUrl) {
-		navigator.serviceWorker.register(cfg.swUrl).catch(function () {
+		var swOpts = cfg.swScope ? { scope: cfg.swScope } : undefined;
+		navigator.serviceWorker.register(cfg.swUrl, swOpts).catch(function () {
 			/* ignore */
 		});
 	}

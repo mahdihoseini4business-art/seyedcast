@@ -41,6 +41,7 @@
 		cover: '',
 		permalink: '',
 		position: 0,
+		duration: 0,
 		rate: 1,
 		playing: false
 	};
@@ -75,6 +76,7 @@
 					cover: state.cover,
 					permalink: state.permalink,
 					position: audio.currentTime || state.position || 0,
+					duration: isFinite(audio.duration) ? audio.duration : state.duration || 0,
 					rate: audio.playbackRate || state.rate || 1,
 					playing: !audio.paused
 				})

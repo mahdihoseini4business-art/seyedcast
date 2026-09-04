@@ -109,7 +109,7 @@ class Seyedcast_App {
 	 * Increment show/episode view counts (unique throttled per visitor).
 	 */
 	public function maybe_track_view() {
-		if ( is_admin() || wp_doing_ajax() ) {
+		if ( is_admin() || wp_doing_ajax() || is_preview() || is_feed() || is_embed() || is_trackback() ) {
 			return;
 		}
 
@@ -133,7 +133,11 @@ class Seyedcast_App {
 		}
 
 		// Episode page: count episode view only (show views are tracked on show pages).
+		// Skip orphan episodes with no valid published parent show.
 		if ( $episode_id > 0 ) {
+			if ( ! self::is_valid_published_show( $show_id ) ) {
+				return;
+			}
 			$is_unique_ep = ! self::has_recent_unique_view( 'episode', $episode_id );
 			Seyedcast_Stats::record_episode_view( $episode_id, $is_unique_ep );
 			if ( $is_unique_ep ) {
@@ -142,13 +146,30 @@ class Seyedcast_App {
 			return;
 		}
 
-		if ( $show_id > 0 ) {
+		if ( $show_id > 0 && self::is_valid_published_show( $show_id ) ) {
 			$is_unique_show = ! self::has_recent_unique_view( 'show', $show_id );
 			Seyedcast_Stats::record_show_view( $show_id, $is_unique_show );
 			if ( $is_unique_show ) {
 				self::mark_unique_view( 'show', $show_id );
 			}
 		}
+	}
+
+	/**
+	 * Whether a show ID points to a published seyedcast_show.
+	 *
+	 * @param int $show_id Show post ID.
+	 * @return bool
+	 */
+	private static function is_valid_published_show( $show_id ) {
+		$show_id = absint( $show_id );
+		if ( $show_id < 1 ) {
+			return false;
+		}
+		$show = get_post( $show_id );
+		return $show instanceof WP_Post
+			&& 'seyedcast_show' === $show->post_type
+			&& 'publish' === $show->post_status;
 	}
 
 	/**

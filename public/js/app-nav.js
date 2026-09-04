@@ -12,6 +12,36 @@
 	var stage = document.getElementById('seyedcast-app-stage');
 	var navigating = false;
 
+	function sameDocumentUrl(a, b) {
+		try {
+			var left = new URL(a, window.location.href);
+			var right = new URL(b, window.location.href);
+			return left.origin === right.origin && left.pathname === right.pathname && left.search === right.search;
+		} catch (e) {
+			return false;
+		}
+	}
+
+	function scrollToHash(url) {
+		var hash = '';
+		try {
+			hash = new URL(url, window.location.href).hash;
+		} catch (e) {
+			hash = '';
+		}
+		if (!hash || hash === '#') {
+			window.scrollTo(0, 0);
+			return;
+		}
+		var id = decodeURIComponent(hash.slice(1));
+		var target = document.getElementById(id) || document.querySelector('[name="' + id.replace(/"/g, '\\"') + '"]');
+		if (target && typeof target.scrollIntoView === 'function') {
+			target.scrollIntoView();
+			return;
+		}
+		window.scrollTo(0, 0);
+	}
+
 	function shouldIntercept(anchor) {
 		if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) {
 			return false;
@@ -26,6 +56,10 @@
 		try {
 			var url = new URL(anchor.href, window.location.href);
 			if (url.origin !== window.location.origin) {
+				return false;
+			}
+			// Same path with only a hash change: let the browser handle it.
+			if (sameDocumentUrl(url.href, window.location.href) && url.hash) {
 				return false;
 			}
 		} catch (e) {
@@ -77,7 +111,7 @@
 			document.title = title;
 		}
 		syncHeaderActive(url);
-		window.scrollTo(0, 0);
+		scrollToHash(url);
 		document.dispatchEvent(new CustomEvent('seyedcast:navigated'));
 	}
 
@@ -85,6 +119,22 @@
 		if (navigating) {
 			return;
 		}
+
+		// Same document + hash only: update history and scroll, no PJAX.
+		if (sameDocumentUrl(url, window.location.href)) {
+			var nextHash = '';
+			try {
+				nextHash = new URL(url, window.location.href).hash;
+			} catch (e) {
+				nextHash = '';
+			}
+			if (push && nextHash !== window.location.hash) {
+				history.pushState({ seyedcast: true }, '', url);
+			}
+			scrollToHash(url);
+			return;
+		}
+
 		navigating = true;
 		setBusy(true);
 
@@ -125,8 +175,12 @@
 			return;
 		}
 		var href = anchor.href;
-		if (!href || href === window.location.href) {
+		if (!href) {
+			return;
+		}
+		if (href === window.location.href) {
 			e.preventDefault();
+			scrollToHash(href);
 			return;
 		}
 		e.preventDefault();
@@ -136,4 +190,11 @@
 	window.addEventListener('popstate', function () {
 		navigate(window.location.href, false);
 	});
+
+	// Initial load with a hash (e.g. comment redirect).
+	if (window.location.hash) {
+		window.setTimeout(function () {
+			scrollToHash(window.location.href);
+		}, 0);
+	}
 })();

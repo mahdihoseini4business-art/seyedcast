@@ -10,6 +10,7 @@
 	var ajaxUrl = cfg.ajaxUrl || '';
 	var searchTimer = null;
 	var sliderTimer = null;
+	var countdownTimers = [];
 
 	function escapeHtml(str) {
 		return String(str || '')
@@ -68,10 +69,21 @@
 				}
 				if (diff <= 0) {
 					el.classList.add('is-done');
+					if (el._seyedcastTimer) {
+						var doneTimer = el._seyedcastTimer;
+						clearInterval(doneTimer);
+						el._seyedcastTimer = null;
+						countdownTimers = countdownTimers.filter(function (t) {
+							return t !== doneTimer;
+						});
+					}
 				}
 			}
 			tick();
-			el._seyedcastTimer = setInterval(tick, 1000);
+			if (!el.classList.contains('is-done')) {
+				el._seyedcastTimer = setInterval(tick, 1000);
+				countdownTimers.push(el._seyedcastTimer);
+			}
 		});
 	}
 
@@ -196,10 +208,46 @@
 			if (!state || !state.audio || !state.title) {
 				return null;
 			}
+			// Treat near-complete playback as finished (stale resume).
+			if (typeof state.position === 'number' && typeof state.duration === 'number' && state.duration > 0) {
+				if (state.position / state.duration >= 0.97) {
+					return null;
+				}
+			}
 			return state;
 		} catch (e) {
 			return null;
 		}
+	}
+
+	function resumePayloadFromState(state) {
+		if (!state) {
+			return null;
+		}
+		return {
+			id: state.id,
+			show_id: state.show_id || 0,
+			title: state.title,
+			show: state.show,
+			audio: state.audio,
+			cover: state.cover,
+			permalink: state.permalink,
+			position: state.position || 0,
+			rate: state.rate || 1
+		};
+	}
+
+	function dispatchResume() {
+		var fresh = loadPlayerState();
+		var payload = resumePayloadFromState(fresh);
+		if (!payload) {
+			return;
+		}
+		document.dispatchEvent(
+			new CustomEvent('seyedcast:play', {
+				detail: payload
+			})
+		);
 	}
 
 	function loadListenHistory() {
@@ -224,7 +272,11 @@
 	}
 
 	function fillResumeSlide(root, state) {
-		if (!root || !state) {
+		if (!root) {
+			return false;
+		}
+		if (!state) {
+			root.hidden = true;
 			return false;
 		}
 		var cover = root.querySelector('[data-role="cover"]');
@@ -260,21 +312,7 @@
 		if (btn && !btn._seyedcastBound) {
 			btn._seyedcastBound = true;
 			btn.addEventListener('click', function () {
-				document.dispatchEvent(
-					new CustomEvent('seyedcast:play', {
-						detail: {
-							id: state.id,
-							show_id: state.show_id || 0,
-							title: state.title,
-							show: state.show,
-							audio: state.audio,
-							cover: state.cover,
-							permalink: state.permalink,
-							position: state.position || 0,
-							rate: state.rate || 1
-						}
-					})
-				);
+				dispatchResume();
 			});
 		}
 		root.hidden = false;
@@ -481,21 +519,7 @@
 		if (btn && !btn._seyedcastBound) {
 			btn._seyedcastBound = true;
 			btn.addEventListener('click', function () {
-				document.dispatchEvent(
-					new CustomEvent('seyedcast:play', {
-						detail: {
-							id: state.id,
-							show_id: state.show_id || 0,
-							title: state.title,
-							show: state.show,
-							audio: state.audio,
-							cover: state.cover,
-							permalink: state.permalink,
-							position: state.position || 0,
-							rate: state.rate || 1
-						}
-					})
-				);
+				dispatchResume();
 			});
 		}
 		section.hidden = false;
@@ -523,6 +547,13 @@
 			clearInterval(sliderTimer);
 			sliderTimer = null;
 		}
+		// Sidebar countdowns stay mounted; only clear timers for detached nodes.
+		document.querySelectorAll('[data-seyedcast-countdown]').forEach(function (el) {
+			if (!document.body.contains(el) && el._seyedcastTimer) {
+				clearInterval(el._seyedcastTimer);
+				el._seyedcastTimer = null;
+			}
+		});
 		var stage = document.getElementById('seyedcast-app-stage');
 		if (stage) {
 			var oldSlider = stage.querySelector('[data-seyedcast-banner-slider]');
@@ -536,6 +567,10 @@
 	document.addEventListener('seyedcast:history', function () {
 		initSuggestions(document);
 		initContinueListening(document);
+		var resume = document.querySelector('[data-seyedcast-resume-slide]');
+		if (resume) {
+			fillResumeSlide(resume, loadPlayerState());
+		}
 	});
 	initCommentReply();
 })();
