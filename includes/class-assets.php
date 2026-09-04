@@ -110,9 +110,20 @@ class Seyedcast_Assets {
 					'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
 					'storageKey'  => 'seyedcast_player_state_v1',
 					'historyKey'  => 'seyedcast_listen_history_v1',
+					'progressKey' => 'seyedcast_episode_progress_v1',
 					'i18n'        => array(
-						'noResults' => __( 'نتیجه‌ای پیدا نشد', 'seyedcast' ),
-						'from'      => __( 'از', 'seyedcast' ),
+						'noResults'        => __( 'نتیجه‌ای پیدا نشد', 'seyedcast' ),
+						'from'             => __( 'از', 'seyedcast' ),
+						'searching'        => __( 'در حال جستجو…', 'seyedcast' ),
+						'shareCopied'      => __( 'لینک کپی شد — با دوستانت به اشتراک بگذار', 'seyedcast' ),
+						'shareCopiedShort' => __( 'کپی شد ✓', 'seyedcast' ),
+						'shareFail'        => __( 'کپی لینک ممکن نشد', 'seyedcast' ),
+						'shareLabel'       => __( 'انتشار پادکست', 'seyedcast' ),
+						'shareNative'      => __( 'اشتراک‌گذاری شد', 'seyedcast' ),
+						'sortNewest'       => __( 'جدیدترین', 'seyedcast' ),
+						'sortOldest'       => __( 'قدیمی‌ترین', 'seyedcast' ),
+						'sortNumber'       => __( 'شماره', 'seyedcast' ),
+						'progressDone'     => __( 'گوش داده‌اید', 'seyedcast' ),
 					),
 				)
 			);
@@ -147,13 +158,16 @@ class Seyedcast_Assets {
 				'storageKey'     => 'seyedcast_player_state_v1',
 				'historyKey'     => 'seyedcast_listen_history_v1',
 				'listenerKey'    => 'seyedcast_listener_id_v1',
+				'progressKey'    => 'seyedcast_episode_progress_v1',
 				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
 				'progressAction' => 'seyedcast_listen_progress',
 				'i18n'           => array(
-					'play'    => __( 'پخش', 'seyedcast' ),
-					'pause'   => __( 'توقف', 'seyedcast' ),
-					'close'   => __( 'بستن', 'seyedcast' ),
-					'noAudio' => __( 'فایل صوتی موجود نیست', 'seyedcast' ),
+					'play'         => __( 'پخش', 'seyedcast' ),
+					'pause'        => __( 'توقف', 'seyedcast' ),
+					'close'        => __( 'بستن', 'seyedcast' ),
+					'noAudio'      => __( 'فایل صوتی موجود نیست', 'seyedcast' ),
+					'shareCopied'  => __( 'لینک کپی شد — با دوستانت به اشتراک بگذار', 'seyedcast' ),
+					'shareFail'    => __( 'کپی لینک ممکن نشد', 'seyedcast' ),
 				),
 				'colors'     => $colors,
 				'preset'     => $preset,
@@ -234,6 +248,11 @@ class Seyedcast_Assets {
 					<option value="1.5">۱.۵×</option>
 					<option value="2">۲×</option>
 				</select>
+				<button type="button" class="seyedcast-btn seyedcast-btn--icon seyedcast-sticky-player__share--desktop" data-action="share" hidden aria-label="<?php esc_attr_e( 'اشتراک‌گذاری اپیزود', 'seyedcast' ); ?>">
+					<span class="seyedcast-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+					</span>
+				</button>
 				<button type="button" class="seyedcast-btn seyedcast-btn--icon seyedcast-sticky-player__close--desktop" data-action="close" aria-label="<?php esc_attr_e( 'بستن پلیر', 'seyedcast' ); ?>">
 					<span class="seyedcast-icon seyedcast-icon--close" aria-hidden="true">
 						<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -265,6 +284,11 @@ class Seyedcast_Assets {
 						<option value="1.5">۱.۵×</option>
 						<option value="2">۲×</option>
 					</select>
+					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="share" hidden aria-label="<?php esc_attr_e( 'اشتراک‌گذاری اپیزود', 'seyedcast' ); ?>">
+						<span class="seyedcast-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+						</span>
+					</button>
 					<button type="button" class="seyedcast-btn seyedcast-btn--icon" data-action="close" aria-label="<?php esc_attr_e( 'بستن پلیر', 'seyedcast' ); ?>">
 						<span class="seyedcast-icon seyedcast-icon--close" aria-hidden="true">
 							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>

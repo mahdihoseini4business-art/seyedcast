@@ -52,28 +52,37 @@ ob_start();
 				<?php
 				$notify_on = class_exists( 'Seyedcast_Notify_Leads', false ) && Seyedcast_Notify_Leads::is_enabled();
 				$has_play  = $first && ! empty( $first['audio'] );
-				if ( $has_play || $notify_on ) :
-					?>
-					<div class="seyedcast-hero__actions">
-						<?php if ( $has_play ) : ?>
-							<button type="button" class="seyedcast-btn seyedcast-btn--primary seyedcast-btn--lg" data-seyedcast-play="<?php echo $first_json; ?>">
-								<span class="seyedcast-btn__icon" aria-hidden="true"></span>
-								<?php esc_html_e( 'شروع پخش', 'seyedcast' ); ?>
-							</button>
-							<?php if ( ! empty( $first['permalink'] ) ) : ?>
-								<a class="seyedcast-btn seyedcast-btn--ghost" href="<?php echo esc_url( $first['permalink'] ); ?>" data-seyedcast-nav><?php esc_html_e( 'آخرین اپیزود', 'seyedcast' ); ?></a>
-							<?php endif; ?>
+				?>
+				<div class="seyedcast-hero__actions">
+					<?php if ( $has_play ) : ?>
+						<button type="button" class="seyedcast-btn seyedcast-btn--primary seyedcast-btn--lg" data-seyedcast-play="<?php echo $first_json; ?>">
+							<span class="seyedcast-btn__icon" aria-hidden="true"></span>
+							<?php esc_html_e( 'شروع پخش', 'seyedcast' ); ?>
+						</button>
+						<?php if ( ! empty( $first['permalink'] ) ) : ?>
+							<a class="seyedcast-btn seyedcast-btn--ghost" href="<?php echo esc_url( $first['permalink'] ); ?>" data-seyedcast-nav><?php esc_html_e( 'آخرین اپیزود', 'seyedcast' ); ?></a>
 						<?php endif; ?>
-						<?php
+					<?php endif; ?>
+					<?php
+					Seyedcast_Templates::partial(
+						'share-cta',
+						array(
+							'seyedcast_share_url'   => get_permalink( $show_id ),
+							'seyedcast_share_label' => __( 'انتشار پادکست', 'seyedcast' ),
+							'seyedcast_share_title' => get_the_title( $show_id ),
+							'seyedcast_share_text'  => __( 'این پادکست رو گوش بده:', 'seyedcast' ),
+						)
+					);
+					if ( $notify_on ) {
 						Seyedcast_Templates::partial(
 							'notify-cta',
 							array(
 								'seyedcast_notify_show_id' => $show_id,
 							)
 						);
-						?>
-					</div>
-				<?php endif; ?>
+					}
+					?>
+				</div>
 			</div>
 		</div>
 	</section>
@@ -85,21 +94,36 @@ ob_start();
 			</div>
 		<?php endif; ?>
 
-		<div class="seyedcast-section-head">
-			<h2><?php esc_html_e( 'اپیزودها', 'seyedcast' ); ?></h2>
-			<span class="seyedcast-section-head__hint"><?php echo esc_html( sprintf( _n( '%s مورد', '%s مورد', count( $episodes ), 'seyedcast' ), number_format_i18n( count( $episodes ) ) ) ); ?></span>
+		<div class="seyedcast-section-head seyedcast-section-head--episodes">
+			<div class="seyedcast-section-head__titles">
+				<h2><?php esc_html_e( 'اپیزودها', 'seyedcast' ); ?></h2>
+				<span class="seyedcast-section-head__hint"><?php echo esc_html( sprintf( _n( '%s مورد', '%s مورد', count( $episodes ), 'seyedcast' ), number_format_i18n( count( $episodes ) ) ) ); ?></span>
+			</div>
+			<?php if ( count( $episodes ) > 1 ) : ?>
+				<div class="seyedcast-episode-sort" data-seyedcast-episode-sort role="group" aria-label="<?php esc_attr_e( 'مرتب‌سازی اپیزودها', 'seyedcast' ); ?>">
+					<button type="button" class="seyedcast-episode-sort__btn is-active" data-sort="newest"><?php esc_html_e( 'جدیدترین', 'seyedcast' ); ?></button>
+					<button type="button" class="seyedcast-episode-sort__btn" data-sort="oldest"><?php esc_html_e( 'قدیمی‌ترین', 'seyedcast' ); ?></button>
+					<button type="button" class="seyedcast-episode-sort__btn" data-sort="number"><?php esc_html_e( 'شماره', 'seyedcast' ); ?></button>
+				</div>
+			<?php endif; ?>
 		</div>
 
 		<?php if ( $episodes ) : ?>
-			<ul class="seyedcast-episode-list">
+			<ul class="seyedcast-episode-list" data-seyedcast-episode-list>
 				<?php
 				$i = 0;
 				foreach ( $episodes as $episode ) :
 					$i++;
 					$payload = Seyedcast_Templates::episode_payload( $episode );
 					$json    = esc_attr( wp_json_encode( $payload ) );
+					$date_ts = (int) get_post_time( 'U', true, $episode );
 					?>
-					<li class="seyedcast-episode-row" data-episode-id="<?php echo esc_attr( (string) $payload['id'] ); ?>">
+					<li
+						class="seyedcast-episode-row"
+						data-episode-id="<?php echo esc_attr( (string) $payload['id'] ); ?>"
+						data-number="<?php echo esc_attr( (string) (float) $payload['number'] ); ?>"
+						data-date="<?php echo esc_attr( (string) $date_ts ); ?>"
+					>
 						<span class="seyedcast-episode-row__index"><?php echo esc_html( (string) $i ); ?></span>
 						<a class="seyedcast-episode-row__cover" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
 							<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="<?php echo esc_attr( $payload['title'] ); ?>" loading="lazy" />
@@ -113,6 +137,10 @@ ob_start();
 								<?php if ( $payload['duration'] ) : ?>
 									<span><?php echo esc_html( $payload['duration'] ); ?></span>
 								<?php endif; ?>
+								<span class="seyedcast-episode-row__progress-label" data-role="progress-label"></span>
+							</div>
+							<div class="seyedcast-episode-row__progress" data-role="progress" hidden aria-hidden="true">
+								<span class="seyedcast-episode-row__progress-bar" data-role="progress-bar"></span>
 							</div>
 						</div>
 						<button type="button" class="seyedcast-play-btn" data-seyedcast-play="<?php echo $json; ?>" aria-label="<?php esc_attr_e( 'پخش', 'seyedcast' ); ?>">
@@ -122,7 +150,13 @@ ob_start();
 				<?php endforeach; ?>
 			</ul>
 		<?php else : ?>
-			<p class="seyedcast-empty"><?php esc_html_e( 'هنوز اپیزودی برای این پادکست منتشر نشده.', 'seyedcast' ); ?></p>
+			<div class="seyedcast-empty-state">
+				<div class="seyedcast-empty-state__art" aria-hidden="true">
+					<svg viewBox="0 0 80 80" width="72" height="72" fill="none"><circle cx="40" cy="40" r="36" stroke="currentColor" stroke-width="2" opacity=".25"/><path d="M28 30v20l18-10-18-10z" fill="currentColor" opacity=".45"/><path d="M52 28v24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".55"/></svg>
+				</div>
+				<h3 class="seyedcast-empty-state__title"><?php esc_html_e( 'هنوز اپیزودی نیست', 'seyedcast' ); ?></h3>
+				<p class="seyedcast-empty-state__text"><?php esc_html_e( 'به محض انتشار اپیزود جدید، اینجا نمایش داده می‌شود. می‌توانید برای خبر شدن ثبت‌نام کنید.', 'seyedcast' ); ?></p>
+			</div>
 		<?php endif; ?>
 	</section>
 

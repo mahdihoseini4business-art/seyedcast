@@ -53,6 +53,21 @@ ob_start();
 					<?php if ( $show ) : ?>
 						<a class="seyedcast-btn seyedcast-btn--ghost" href="<?php echo esc_url( get_permalink( $show ) ); ?>" data-seyedcast-nav><?php esc_html_e( 'همه اپیزودها', 'seyedcast' ); ?></a>
 					<?php endif; ?>
+					<?php
+					Seyedcast_Templates::partial(
+						'share-cta',
+						array(
+							'seyedcast_share_url'   => get_permalink( $episode ),
+							'seyedcast_share_label' => __( 'انتشار پادکست', 'seyedcast' ),
+							'seyedcast_share_title' => get_the_title( $episode ),
+							'seyedcast_share_text'  => $show ? sprintf(
+								/* translators: %s: show title */
+								__( 'اپیزودی از «%s»:', 'seyedcast' ),
+								get_the_title( $show )
+							) : __( 'این اپیزود رو گوش بده:', 'seyedcast' ),
+						)
+					);
+					?>
 				</div>
 			</div>
 		</div>

@@ -39,6 +39,9 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 
 		<div class="seyedcast-app-search" data-seyedcast-search>
 			<label class="screen-reader-text" for="seyedcast-search-input"><?php esc_html_e( 'جستجو', 'seyedcast' ); ?></label>
+			<span class="seyedcast-app-search__icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+			</span>
 			<input
 				type="search"
 				id="seyedcast-search-input"
@@ -53,10 +56,6 @@ $title    = ! empty( $settings['archive_title'] ) ? $settings['archive_title'] :
 			/>
 			<div class="seyedcast-app-search__results" id="seyedcast-search-results" hidden role="listbox"></div>
 		</div>
-
-		<button type="button" class="seyedcast-app-header__sidebar-toggle" data-seyedcast-sidebar-toggle aria-expanded="false" aria-controls="seyedcast-sidebar">
-			<?php esc_html_e( 'اطلاعیه‌ها', 'seyedcast' ); ?>
-		</button>
 	</div>
 
 	<?php if ( $topics ) : ?>

@@ -76,6 +76,42 @@
 
 	function setBusy(on) {
 		shell.classList.toggle('is-navigating', !!on);
+		if (!stage) {
+			return;
+		}
+		if (on) {
+			if (!document.getElementById('seyedcast-nav-skeleton')) {
+				var sk = document.createElement('div');
+				sk.id = 'seyedcast-nav-skeleton';
+				sk.className = 'seyedcast-skeleton';
+				sk.setAttribute('aria-hidden', 'true');
+				sk.innerHTML =
+					'<div class="seyedcast-skeleton__hero">' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__cover"></div>' +
+					'<div class="seyedcast-skeleton__lines">' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__line seyedcast-skeleton__line--lg"></div>' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__line"></div>' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__line seyedcast-skeleton__line--sm"></div>' +
+					'<div class="seyedcast-skeleton__actions">' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__pill"></div>' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__pill seyedcast-skeleton__pill--ghost"></div>' +
+					'</div></div></div>' +
+					'<div class="seyedcast-skeleton__grid">' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__card"></div>' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__card"></div>' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__card"></div>' +
+					'<div class="seyedcast-skeleton__block seyedcast-skeleton__card"></div>' +
+					'</div>';
+				stage.appendChild(sk);
+			}
+			stage.classList.add('is-skeleton');
+		} else {
+			stage.classList.remove('is-skeleton');
+			var old = document.getElementById('seyedcast-nav-skeleton');
+			if (old && old.parentNode) {
+				old.parentNode.removeChild(old);
+			}
+		}
 	}
 
 	function syncHeaderActive(url) {
