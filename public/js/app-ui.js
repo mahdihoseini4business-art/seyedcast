@@ -117,6 +117,101 @@
 				setSidebar(false);
 			}
 		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape' && document.body.classList.contains('seyedcast-sidebar-open')) {
+				setSidebar(false);
+			}
+		});
+	}
+
+	function showToast(message, ok) {
+		var existing = document.querySelector('.seyedcast-toast');
+		if (existing) {
+			existing.remove();
+		}
+		var toast = document.createElement('div');
+		toast.className = 'seyedcast-toast' + (ok === false ? ' is-error' : ' is-ok');
+		toast.setAttribute('role', 'status');
+		toast.setAttribute('aria-live', 'polite');
+		toast.textContent = message;
+		document.body.appendChild(toast);
+		requestAnimationFrame(function () {
+			toast.classList.add('is-visible');
+		});
+		window.setTimeout(function () {
+			toast.classList.remove('is-visible');
+			window.setTimeout(function () {
+				if (toast.parentNode) {
+					toast.parentNode.removeChild(toast);
+				}
+			}, 280);
+		}, 2600);
+	}
+
+	function copyText(text) {
+		if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+			return navigator.clipboard.writeText(text);
+		}
+		return new Promise(function (resolve, reject) {
+			var ta = document.createElement('textarea');
+			ta.value = text;
+			ta.setAttribute('readonly', '');
+			ta.style.position = 'fixed';
+			ta.style.insetInlineStart = '-9999px';
+			document.body.appendChild(ta);
+			ta.select();
+			try {
+				var ok = document.execCommand('copy');
+				document.body.removeChild(ta);
+				if (ok) {
+					resolve();
+				} else {
+					reject(new Error('copy failed'));
+				}
+			} catch (err) {
+				if (ta.parentNode) {
+					document.body.removeChild(ta);
+				}
+				reject(err);
+			}
+		});
+	}
+
+	function initShare() {
+		document.addEventListener('click', function (e) {
+			var btn = e.target.closest('[data-seyedcast-share]');
+			if (!btn) {
+				return;
+			}
+			e.preventDefault();
+			var url = btn.getAttribute('data-share-url') || window.location.href;
+			var labelEl = btn.querySelector('[data-role="label"]');
+			var defaultLabel =
+				(cfg.i18n && cfg.i18n.shareLabel) || (labelEl ? labelEl.textContent : 'انتشار پادکست');
+			if (labelEl && !btn._seyedcastShareLabel) {
+				btn._seyedcastShareLabel = labelEl.textContent;
+			}
+			copyText(url)
+				.then(function () {
+					showToast(
+						(cfg.i18n && cfg.i18n.shareCopied) || 'لینک کپی شد — با دوستانت به اشتراک بگذار',
+						true
+					);
+					btn.classList.add('is-copied');
+					if (labelEl) {
+						labelEl.textContent = (cfg.i18n && cfg.i18n.shareCopiedShort) || 'کپی شد ✓';
+					}
+					window.setTimeout(function () {
+						btn.classList.remove('is-copied');
+						if (labelEl) {
+							labelEl.textContent = btn._seyedcastShareLabel || defaultLabel;
+						}
+					}, 1800);
+				})
+				.catch(function () {
+					showToast((cfg.i18n && cfg.i18n.shareFail) || 'کپی لینک ممکن نشد', false);
+				});
+		});
 	}
 
 	function renderSearchResults(box, items) {
@@ -131,13 +226,14 @@
 		}
 		box.innerHTML = items
 			.map(function (item) {
+				var cover = item.cover
+					? '<img src="' + escapeAttr(item.cover) + '" alt="" width="40" height="40" />'
+					: '<span class="seyedcast-app-search__thumb" aria-hidden="true"></span>';
 				return (
 					'<a class="seyedcast-app-search__item" role="option" href="' +
 					escapeAttr(item.url) +
 					'" data-seyedcast-nav>' +
-					'<img src="' +
-					escapeAttr(item.cover) +
-					'" alt="" width="40" height="40" />' +
+					cover +
 					'<span><strong>' +
 					escapeHtml(item.title) +
 					'</strong><small>' +
@@ -164,15 +260,25 @@
 			return;
 		}
 
+		function closeResults() {
+			box.hidden = true;
+			input.setAttribute('aria-expanded', 'false');
+		}
+
 		input.addEventListener('input', function () {
 			var q = input.value.trim();
 			clearTimeout(searchTimer);
 			if (q.length < 2) {
-				box.hidden = true;
 				box.innerHTML = '';
-				input.setAttribute('aria-expanded', 'false');
+				closeResults();
 				return;
 			}
+			box.innerHTML =
+				'<div class="seyedcast-app-search__empty">' +
+				escapeHtml((cfg.i18n && cfg.i18n.searching) || 'در حال جستجو…') +
+				'</div>';
+			box.hidden = false;
+			input.setAttribute('aria-expanded', 'true');
 			searchTimer = setTimeout(function () {
 				fetch(ajaxUrl + '?action=seyedcast_search&q=' + encodeURIComponent(q), {
 					credentials: 'same-origin'
@@ -181,19 +287,30 @@
 						return r.json();
 					})
 					.then(function (json) {
+						if (input.value.trim() !== q) {
+							return;
+						}
 						var items = json && json.success && json.data ? json.data.items : [];
 						renderSearchResults(box, items);
 					})
 					.catch(function () {
-						box.hidden = true;
+						if (input.value.trim() === q) {
+							closeResults();
+						}
 					});
 			}, 280);
 		});
 
+		input.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') {
+				closeResults();
+				input.blur();
+			}
+		});
+
 		document.addEventListener('click', function (e) {
 			if (!wrap.contains(e.target)) {
-				box.hidden = true;
-				input.setAttribute('aria-expanded', 'false');
+				closeResults();
 			}
 		});
 	}
@@ -541,6 +658,7 @@
 
 	initSidebar();
 	initSearch();
+	initShare();
 	boot(document);
 	document.addEventListener('seyedcast:navigated', function () {
 		if (sliderTimer) {

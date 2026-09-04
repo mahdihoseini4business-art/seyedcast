@@ -778,7 +778,8 @@ body.seyedcast-preset-soundcloud .seyedcast-hero__cover {
 	}
 
 	.seyedcast-hero__actions .seyedcast-btn,
-	.seyedcast-hero__actions .seyedcast-notify {
+	.seyedcast-hero__actions .seyedcast-notify,
+	.seyedcast-hero__actions .seyedcast-share-btn {
 		width: 100%;
 	}
 
@@ -938,7 +939,7 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 
 .seyedcast-app-header__inner {
 	display: grid;
-	grid-template-columns: auto auto minmax(0, 1fr) auto;
+	grid-template-columns: auto auto minmax(14rem, 1fr);
 	gap: 0.75rem 1rem;
 	align-items: center;
 	padding: 0.75rem clamp(0.85rem, 3vw, 1.75rem);
@@ -1014,6 +1015,20 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 .seyedcast-app-search {
 	position: relative;
 	min-width: 0;
+	width: 100%;
+	max-width: 42rem;
+	justify-self: stretch;
+}
+
+.seyedcast-app-search__icon {
+	position: absolute;
+	inset-inline-start: 0.95rem;
+	top: 50%;
+	transform: translateY(-50%);
+	display: inline-flex;
+	color: var(--sc-muted);
+	pointer-events: none;
+	z-index: 1;
 }
 
 .seyedcast-app-search__input {
@@ -1022,9 +1037,11 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	background: var(--sc-surface);
 	color: var(--sc-text);
 	border-radius: 999px;
-	padding: 0.55rem 1rem;
+	padding-block: 0.6rem;
+	padding-inline-start: 2.55rem;
+	padding-inline-end: 1.1rem;
 	font: inherit;
-	font-size: 0.92rem;
+	font-size: 0.95rem;
 }
 
 .seyedcast-app-search__input:focus {
@@ -1058,7 +1075,8 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	background: color-mix(in srgb, var(--sc-primary) 12%, transparent);
 }
 
-.seyedcast-app-search__item img {
+.seyedcast-app-search__item img,
+.seyedcast-app-search__thumb {
 	width: 40px;
 	height: 40px;
 	aspect-ratio: 1 / 1;
@@ -1066,6 +1084,11 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	object-fit: cover;
 	object-position: center;
 	flex-shrink: 0;
+}
+
+.seyedcast-app-search__thumb {
+	display: block;
+	background: color-mix(in srgb, var(--sc-primary) 18%, var(--sc-line));
 }
 
 .seyedcast-app-search__item span {
@@ -1127,6 +1150,10 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	max-width: 1280px;
 	margin: 0 auto;
 	padding: 1rem clamp(0.85rem, 3vw, 1.75rem) 2rem;
+}
+
+.seyedcast-shell__body:not(:has(.seyedcast-sidebar)) {
+	grid-template-columns: minmax(0, 1fr);
 }
 
 .seyedcast-shell__primary {
@@ -1501,51 +1528,23 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	}
 
 	.seyedcast-sidebar {
-		position: fixed;
-		inset: 0 auto 0 0;
-		width: min(88vw, 340px);
-		max-width: 100%;
-		z-index: 60;
-		background: var(--sc-bg);
-		padding: 1rem;
-		overflow: auto;
-		transform: translateX(-105%);
-		transition: transform 0.28s var(--sc-ease);
-		border-inline-end: 1px solid var(--sc-line);
-		top: 0;
-	}
-
-	html[dir="rtl"] .seyedcast-sidebar,
-	.seyedcast-shell[dir="rtl"] .seyedcast-sidebar,
-	.seyedcast-sidebar {
-		inset: 0 0 0 auto;
-		transform: translateX(105%);
-		border-inline-end: 0;
-		border-inline-start: 1px solid var(--sc-line);
-	}
-
-	.seyedcast-sidebar.is-open {
-		transform: translateX(0);
-	}
-
-	.seyedcast-sidebar__close {
-		display: inline-flex;
-		align-self: flex-start;
-		appearance: none;
+		position: static;
+		top: auto;
+		width: 100%;
+		max-width: none;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+		gap: 1rem;
+		padding: 0;
+		transform: none;
 		border: 0;
 		background: transparent;
-		color: var(--sc-text);
-		font-size: 1.5rem;
-		cursor: pointer;
-		margin-bottom: 0.35rem;
+		overflow: visible;
 	}
 
+	.seyedcast-sidebar__close,
 	.seyedcast-sidebar-backdrop {
-		display: block;
-		position: fixed;
-		inset: 0;
-		z-index: 55;
-		background: color-mix(in srgb, #000 45%, transparent);
+		display: none !important;
 	}
 
 	.seyedcast-featured__slide {
@@ -1560,7 +1559,7 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 
 @media (max-width: 720px) {
 	.seyedcast-app-header__inner {
-		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-columns: auto minmax(0, 1fr);
 	}
 
 	.seyedcast-app-header__nav {
@@ -1569,6 +1568,10 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 
 	.seyedcast-app-header__tag {
 		display: none;
+	}
+
+	.seyedcast-app-search {
+		max-width: none;
 	}
 
 	.seyedcast-featured__slide {
@@ -1893,6 +1896,60 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 
 body.seyedcast-notify-open {
 	overflow: hidden;
+}
+
+.seyedcast-share-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	transition: background 0.2s var(--sc-ease), border-color 0.2s var(--sc-ease), color 0.2s var(--sc-ease);
+}
+
+.seyedcast-share-btn__icon {
+	flex-shrink: 0;
+}
+
+.seyedcast-share-btn.is-copied {
+	border-color: color-mix(in srgb, var(--sc-primary) 55%, transparent);
+	color: var(--sc-primary);
+	background: color-mix(in srgb, var(--sc-primary) 12%, transparent);
+}
+
+.seyedcast-toast {
+	position: fixed;
+	inset-inline: 1rem;
+	bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+	z-index: 100;
+	max-width: 22rem;
+	margin-inline: auto;
+	padding: 0.85rem 1.05rem;
+	border-radius: 14px;
+	font-size: 0.9rem;
+	line-height: 1.45;
+	text-align: center;
+	box-shadow: 0 14px 36px color-mix(in srgb, #000 32%, transparent);
+	opacity: 0;
+	transform: translateY(12px);
+	transition: opacity 0.25s var(--sc-ease), transform 0.25s var(--sc-ease);
+	pointer-events: none;
+}
+
+.seyedcast-toast.is-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.seyedcast-toast.is-ok {
+	background: var(--sc-surface);
+	color: var(--sc-text);
+	border: 1px solid color-mix(in srgb, var(--sc-primary) 45%, var(--sc-line));
+}
+
+.seyedcast-toast.is-error {
+	background: var(--sc-surface);
+	color: var(--sc-text);
+	border: 1px solid color-mix(in srgb, #e45757 55%, var(--sc-line));
 }
 
 @keyframes seyedcast-notify-in {

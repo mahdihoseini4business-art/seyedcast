@@ -52,8 +52,7 @@ ob_start();
 				<?php
 				$notify_on = class_exists( 'Seyedcast_Notify_Leads', false ) && Seyedcast_Notify_Leads::is_enabled();
 				$has_play  = $first && ! empty( $first['audio'] );
-				if ( $has_play || $notify_on ) :
-					?>
+				?>
 					<div class="seyedcast-hero__actions">
 						<?php if ( $has_play ) : ?>
 							<button type="button" class="seyedcast-btn seyedcast-btn--primary seyedcast-btn--lg" data-seyedcast-play="<?php echo $first_json; ?>">
@@ -66,14 +65,22 @@ ob_start();
 						<?php endif; ?>
 						<?php
 						Seyedcast_Templates::partial(
-							'notify-cta',
+							'share-cta',
 							array(
-								'seyedcast_notify_show_id' => $show_id,
+								'seyedcast_share_url'   => get_permalink( $show_id ),
+								'seyedcast_share_label' => __( 'انتشار پادکست', 'seyedcast' ),
 							)
 						);
+						if ( $notify_on ) {
+							Seyedcast_Templates::partial(
+								'notify-cta',
+								array(
+									'seyedcast_notify_show_id' => $show_id,
+								)
+							);
+						}
 						?>
 					</div>
-				<?php endif; ?>
 			</div>
 		</div>
 	</section>

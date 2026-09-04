@@ -111,8 +111,13 @@ class Seyedcast_Assets {
 					'storageKey'  => 'seyedcast_player_state_v1',
 					'historyKey'  => 'seyedcast_listen_history_v1',
 					'i18n'        => array(
-						'noResults' => __( 'نتیجه‌ای پیدا نشد', 'seyedcast' ),
-						'from'      => __( 'از', 'seyedcast' ),
+						'noResults'        => __( 'نتیجه‌ای پیدا نشد', 'seyedcast' ),
+						'from'             => __( 'از', 'seyedcast' ),
+						'searching'        => __( 'در حال جستجو…', 'seyedcast' ),
+						'shareCopied'      => __( 'لینک کپی شد — با دوستانت به اشتراک بگذار', 'seyedcast' ),
+						'shareCopiedShort' => __( 'کپی شد ✓', 'seyedcast' ),
+						'shareFail'        => __( 'کپی لینک ممکن نشد', 'seyedcast' ),
+						'shareLabel'       => __( 'انتشار پادکست', 'seyedcast' ),
 					),
 				)
 			);

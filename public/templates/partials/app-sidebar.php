@@ -33,10 +33,13 @@ $events = array_values(
 		}
 	)
 );
+
+// Hide empty sidebar from visitors (no useless drawer / column).
+if ( ! $events && ! $banners ) {
+	return;
+}
 ?>
 <aside class="seyedcast-sidebar" id="seyedcast-sidebar" aria-label="<?php esc_attr_e( 'سایدبار پادکست', 'seyedcast' ); ?>">
-	<button type="button" class="seyedcast-sidebar__close" data-seyedcast-sidebar-close aria-label="<?php esc_attr_e( 'بستن', 'seyedcast' ); ?>">×</button>
-
 	<?php if ( $events ) : ?>
 		<section class="seyedcast-sidebar__block">
 			<h3 class="seyedcast-sidebar__title"><?php esc_html_e( 'پخش‌های آینده', 'seyedcast' ); ?></h3>
@@ -111,11 +114,4 @@ $events = array_values(
 			</div>
 		</section>
 	<?php endif; ?>
-
-	<?php if ( ! $events && ! $banners ) : ?>
-		<section class="seyedcast-sidebar__block seyedcast-sidebar__block--empty">
-			<p><?php esc_html_e( 'از پنل ادمین می‌توانید بنر تبلیغاتی یا اعلام پخش اپیزود جدید اضافه کنید.', 'seyedcast' ); ?></p>
-		</section>
-	<?php endif; ?>
 </aside>
-<div class="seyedcast-sidebar-backdrop" data-seyedcast-sidebar-close hidden></div>
