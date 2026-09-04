@@ -19,7 +19,7 @@ $label   = Seyedcast_Notify_Leads::button_text();
 $uid     = 'seyedcast-notify-' . ( $show_id > 0 ? (string) $show_id : 'all' ) . '-' . wp_unique_id();
 ?>
 <div class="seyedcast-notify" data-seyedcast-notify data-show-id="<?php echo esc_attr( (string) $show_id ); ?>">
-	<button type="button" class="seyedcast-btn seyedcast-btn--ghost seyedcast-notify__trigger" data-seyedcast-notify-open aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $uid ); ?>">
+	<button type="button" class="seyedcast-btn seyedcast-btn--primary seyedcast-notify__trigger" data-seyedcast-notify-open aria-haspopup="dialog" aria-controls="<?php echo esc_attr( $uid ); ?>">
 		<?php echo esc_html( $label ); ?>
 	</button>
 
