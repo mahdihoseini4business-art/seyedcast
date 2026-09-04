@@ -3,20 +3,27 @@
 	--sc-ease: cubic-bezier(0.22, 1, 0.36, 1);
 	--sc-player-bg: color-mix(in srgb, var(--sc-surface, #181818) 92%, transparent);
 	--sc-player-line: color-mix(in srgb, var(--sc-text, #fff) 12%, transparent);
+	--sc-player-gutter: clamp(0.75rem, 2.6vw, 1.25rem);
+	--sc-player-lift: max(0.75rem, env(safe-area-inset-bottom, 0px));
+	--sc-player-radius: 18px;
 	position: fixed;
-	inset-inline: 0;
-	bottom: 0;
+	inset-inline: max(var(--sc-player-gutter), env(safe-area-inset-left, 0px))
+		max(var(--sc-player-gutter), env(safe-area-inset-right, 0px));
+	bottom: var(--sc-player-lift);
 	z-index: 99990;
+	width: auto;
 	background: var(--sc-player-bg);
 	backdrop-filter: blur(22px) saturate(1.15);
 	-webkit-backdrop-filter: blur(22px) saturate(1.15);
-	border-top: 1px solid var(--sc-player-line);
-	box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.22);
+	border: 1px solid var(--sc-player-line);
+	border-radius: var(--sc-player-radius);
+	overflow: hidden;
+	box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
 	font-family: "Vazirmatn", "IRANSansX", "Segoe UI", Tahoma, sans-serif;
 	color: var(--sc-text, #fff);
 	line-height: 1.45;
 	letter-spacing: 0;
-	transform: translateY(110%);
+	transform: translateY(calc(110% + var(--sc-player-lift)));
 	opacity: 0;
 	pointer-events: none;
 	transition: transform 0.4s var(--sc-ease), opacity 0.35s var(--sc-ease);
@@ -365,7 +372,7 @@ body.seyedcast-preset-soundcloud .seyedcast-btn--play {
 .seyedcast-pwa-prompt {
 	position: fixed;
 	inset-inline: 0;
-	bottom: 6rem;
+	bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
 	z-index: 100000;
 	padding: 0 1rem;
 	pointer-events: none;
@@ -500,7 +507,10 @@ body.seyedcast-preset-soundcloud .seyedcast-pwa-prompt__card {
 
 @media (max-width: 900px) {
 	.seyedcast-sticky-player {
-		padding-bottom: env(safe-area-inset-bottom, 0px);
+		--sc-player-gutter: clamp(0.7rem, 3.4vw, 1rem);
+		--sc-player-lift: max(0.85rem, calc(env(safe-area-inset-bottom, 0px) + 0.4rem));
+		--sc-player-radius: 18px;
+		padding-bottom: 0.1rem;
 	}
 
 	.seyedcast-sticky-player__scrub {
@@ -532,7 +542,7 @@ body.seyedcast-preset-soundcloud .seyedcast-pwa-prompt__card {
 			"cover meta play"
 			"tools tools tools";
 		gap: 0.4rem 0.65rem;
-		padding: 0.55rem 0.7rem 0.6rem;
+		padding: 0.6rem 0.75rem 0.65rem;
 	}
 
 	.seyedcast-sticky-player__cover {
@@ -598,7 +608,7 @@ body.seyedcast-preset-soundcloud .seyedcast-pwa-prompt__card {
 	}
 
 	.seyedcast-pwa-prompt {
-		bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+		bottom: calc(8.25rem + env(safe-area-inset-bottom, 0px));
 		padding-inline: 0.75rem;
 	}
 
@@ -643,6 +653,6 @@ body.seyedcast-player-open [class*="sms-contact"],
 body.seyedcast-player-open [id*="sms-contact"],
 body.seyedcast-player-open .floating-contact,
 body.seyedcast-player-open .contact-floating-btn {
-	bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)) !important;
+	bottom: calc(6.75rem + env(safe-area-inset-bottom, 0px)) !important;
 	z-index: 100000 !important;
 }

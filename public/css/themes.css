@@ -11,7 +11,7 @@
 	color: var(--sc-text);
 	background: var(--sc-bg);
 	min-height: 72vh;
-	padding-bottom: 7.5rem;
+	padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
 	line-height: 1.75;
 	letter-spacing: 0;
 	-webkit-font-smoothing: antialiased;
@@ -750,7 +750,7 @@
 }
 
 body.seyedcast-player-open .seyedcast-app {
-	padding-bottom: 8.5rem;
+	padding-bottom: calc(9.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* ===== Theme presets (distinct atmospheres) ===== */
@@ -855,12 +855,12 @@ body.seyedcast-preset-soundcloud .seyedcast-hero__cover {
 
 @media (max-width: 720px) {
 	.seyedcast-app {
-		padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+		padding-bottom: calc(8.75rem + env(safe-area-inset-bottom, 0px));
 		overflow-x: hidden;
 	}
 
 	body.seyedcast-player-open .seyedcast-app {
-		padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
+		padding-bottom: calc(11rem + env(safe-area-inset-bottom, 0px));
 	}
 
 	.seyedcast-hero {
@@ -1041,9 +1041,51 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 
 .seyedcast-shell {
 	min-height: 100vh;
+	min-height: 100dvh;
 	background: var(--sc-bg);
 	color: var(--sc-text);
-	padding-bottom: 7.5rem;
+	padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.seyedcast-app-header {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	backdrop-filter: blur(14px);
+	background: color-mix(in srgb, var(--sc-bg) 82%, transparent);
+	border-bottom: 1px solid var(--sc-line);
+	/* Keep logo/search clear of status bar / notch in installed PWA */
+	padding-top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+	padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+	.seyedcast-app-header {
+		padding-top: calc(env(safe-area-inset-top, 0px) + 0.7rem);
+	}
+
+	.seyedcast-sticky-player {
+		--sc-player-lift: max(0.95rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem));
+	}
+}
+
+/* iOS installed web app (legacy) */
+@supports (-webkit-touch-callout: none) {
+	@media (display-mode: standalone) {
+		.seyedcast-app-header {
+			padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+		}
+	}
+}
+
+.seyedcast-app-header__inner {
+	display: grid;
+	grid-template-columns: auto auto minmax(14rem, 1fr);
+	gap: 0.75rem 1rem;
+	align-items: center;
+	padding: 0.7rem clamp(0.85rem, 3vw, 1.75rem) 0.75rem;
+	max-width: 1280px;
+	margin: 0 auto;
 }
 
 .seyedcast-shell.is-navigating {
@@ -1063,10 +1105,6 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	padding: 0.25rem 0 1rem;
 	pointer-events: none;
 	animation: seyedcast-fade-up 0.35s var(--sc-ease) both;
-}
-
-.seyedcast-app-stage {
-	position: relative;
 }
 
 .seyedcast-skeleton__hero {
@@ -1177,25 +1215,6 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	overflow: hidden;
 	clip: rect(0, 0, 0, 0);
 	border: 0;
-}
-
-.seyedcast-app-header {
-	position: sticky;
-	top: 0;
-	z-index: 40;
-	backdrop-filter: blur(14px);
-	background: color-mix(in srgb, var(--sc-bg) 82%, transparent);
-	border-bottom: 1px solid var(--sc-line);
-}
-
-.seyedcast-app-header__inner {
-	display: grid;
-	grid-template-columns: auto auto minmax(14rem, 1fr);
-	gap: 0.75rem 1rem;
-	align-items: center;
-	padding: 0.75rem clamp(0.85rem, 3vw, 1.75rem);
-	max-width: 1280px;
-	margin: 0 auto;
 }
 
 .seyedcast-app-header__brand {
@@ -1370,7 +1389,9 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 	display: flex;
 	gap: 0.45rem;
 	overflow-x: auto;
-	padding: 0  clamp(0.85rem, 3vw, 1.75rem) 0.75rem;
+	padding: 0 clamp(0.85rem, 3vw, 1.75rem) 0.75rem;
+	padding-inline: max(clamp(0.85rem, 3vw, 1.75rem), env(safe-area-inset-left, 0px))
+		max(clamp(0.85rem, 3vw, 1.75rem), env(safe-area-inset-right, 0px));
 	max-width: 1280px;
 	margin: 0 auto;
 	scrollbar-width: thin;
@@ -1412,6 +1433,7 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 }
 
 .seyedcast-app-stage {
+	position: relative;
 	min-width: 0;
 }
 
@@ -1892,7 +1914,7 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 }
 
 .seyedcast-comments {
-	padding-bottom: 4.5rem;
+	padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .seyedcast-comments__empty {
@@ -2176,7 +2198,7 @@ body.seyedcast-notify-open {
 .seyedcast-toast {
 	position: fixed;
 	inset-inline: 1rem;
-	bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+	bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
 	z-index: 100;
 	max-width: 22rem;
 	margin-inline: auto;

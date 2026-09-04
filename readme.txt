@@ -4,7 +4,7 @@ Tags: podcast, audio, pwa, rtl, education
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.4.4
+Stable tag: 1.4.5
 License: GPLv2 or later
 
 پادکست آموزشی با چند شو/سری، صفحه آرشیو و سینگل سئو‌محور، پلیر ثابت، تم‌های طراحی و نصب PWA.
@@ -31,6 +31,11 @@ Seyedcast یک افزونه وردپرس برای انتشار پادکست‌ه
 3. از منوی Seyedcast تنظیمات را انجام دهید و شو/اپیزود بسازید.
 
 == Changelog ==
+
+= 1.4.5 =
+* فاصله امن بالا برای لوگو/جستجو در PWA نصب‌شده (safe-area-inset-top)
+* پلیر شناور با حاشیه چپ/راست/پایین و گوشه گرد ~۱۸px برای کلیک راحت‌تر
+* افزایش padding پایین محتوا متناسب با پلیر شناور
 
 = 1.4.4 =
 * Web Share API روی موبایل + دکمه اشتراک در پلیر ثابت
