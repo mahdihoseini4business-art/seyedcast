@@ -45,6 +45,23 @@ ob_start();
 
 	<?php Seyedcast_Templates::partial( 'suggested-for-you' ); ?>
 
+	<?php if ( class_exists( 'Seyedcast_Notify_Leads', false ) && Seyedcast_Notify_Leads::is_enabled() ) : ?>
+		<section class="seyedcast-section seyedcast-notify-section">
+			<div class="seyedcast-section-head">
+				<h2><?php esc_html_e( 'خبرم کن', 'seyedcast' ); ?></h2>
+				<span class="seyedcast-section-head__hint"><?php esc_html_e( 'اپیزود جدید که اومد پیام بگیر', 'seyedcast' ); ?></span>
+			</div>
+			<?php
+			Seyedcast_Templates::partial(
+				'notify-cta',
+				array(
+					'seyedcast_notify_show_id' => 0,
+				)
+			);
+			?>
+		</section>
+	<?php endif; ?>
+
 	<?php
 	Seyedcast_Templates::partial(
 		'comments',

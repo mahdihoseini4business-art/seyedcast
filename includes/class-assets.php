@@ -87,6 +87,14 @@ class Seyedcast_Assets {
 			true
 		);
 
+		wp_register_script(
+			'seyedcast-notify',
+			SEYEDCAST_URL . 'public/js/notify.js',
+			array(),
+			SEYEDCAST_VERSION,
+			true
+		);
+
 		// Player available site-wide so playback continues across non-app pages via restore.
 		wp_enqueue_style( 'seyedcast-player' );
 		wp_enqueue_script( 'seyedcast-player' );
@@ -110,6 +118,25 @@ class Seyedcast_Assets {
 			);
 			if ( ! empty( Seyedcast_Settings::get()['comments_enabled'] ) && self::is_seyedcast_context() ) {
 				wp_enqueue_script( 'comment-reply' );
+			}
+			if ( class_exists( 'Seyedcast_Notify_Leads', false ) && Seyedcast_Notify_Leads::is_enabled() ) {
+				wp_enqueue_script( 'seyedcast-notify' );
+				wp_localize_script(
+					'seyedcast-notify',
+					'seyedcastNotify',
+					array(
+						'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+						'action'  => 'seyedcast_notify_lead',
+						'nonce'   => wp_create_nonce( Seyedcast_Notify_Leads::NONCE_ACTION ),
+						'i18n'    => array(
+							'nameRequired'  => __( 'نام را وارد کنید.', 'seyedcast' ),
+							'phoneRequired' => __( 'شماره موبایل را وارد کنید.', 'seyedcast' ),
+							'sending'       => __( 'در حال ثبت…', 'seyedcast' ),
+							'success'       => __( 'ثبت شد. وقتی پادکست جدید بیاد خبرت می‌کنیم.', 'seyedcast' ),
+							'error'         => __( 'ثبت انجام نشد. دوباره تلاش کنید.', 'seyedcast' ),
+						),
+					)
+				);
 			}
 		}
 

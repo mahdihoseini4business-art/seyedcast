@@ -49,15 +49,29 @@ ob_start();
 						<span class="seyedcast-chip"><?php echo esc_html( sprintf( '%s %s', number_format_i18n( $view_count ), Seyedcast_Stats::view_label() ) ); ?></span>
 					<?php endif; ?>
 				</div>
-				<?php if ( $first && ! empty( $first['audio'] ) ) : ?>
+				<?php
+				$notify_on = class_exists( 'Seyedcast_Notify_Leads', false ) && Seyedcast_Notify_Leads::is_enabled();
+				$has_play  = $first && ! empty( $first['audio'] );
+				if ( $has_play || $notify_on ) :
+					?>
 					<div class="seyedcast-hero__actions">
-						<button type="button" class="seyedcast-btn seyedcast-btn--primary seyedcast-btn--lg" data-seyedcast-play="<?php echo $first_json; ?>">
-							<span class="seyedcast-btn__icon" aria-hidden="true"></span>
-							<?php esc_html_e( 'شروع پخش', 'seyedcast' ); ?>
-						</button>
-						<?php if ( ! empty( $first['permalink'] ) ) : ?>
-							<a class="seyedcast-btn seyedcast-btn--ghost" href="<?php echo esc_url( $first['permalink'] ); ?>" data-seyedcast-nav><?php esc_html_e( 'آخرین اپیزود', 'seyedcast' ); ?></a>
+						<?php if ( $has_play ) : ?>
+							<button type="button" class="seyedcast-btn seyedcast-btn--primary seyedcast-btn--lg" data-seyedcast-play="<?php echo $first_json; ?>">
+								<span class="seyedcast-btn__icon" aria-hidden="true"></span>
+								<?php esc_html_e( 'شروع پخش', 'seyedcast' ); ?>
+							</button>
+							<?php if ( ! empty( $first['permalink'] ) ) : ?>
+								<a class="seyedcast-btn seyedcast-btn--ghost" href="<?php echo esc_url( $first['permalink'] ); ?>" data-seyedcast-nav><?php esc_html_e( 'آخرین اپیزود', 'seyedcast' ); ?></a>
+							<?php endif; ?>
 						<?php endif; ?>
+						<?php
+						Seyedcast_Templates::partial(
+							'notify-cta',
+							array(
+								'seyedcast_notify_show_id' => $show_id,
+							)
+						);
+						?>
 					</div>
 				<?php endif; ?>
 			</div>

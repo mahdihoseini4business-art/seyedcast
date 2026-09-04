@@ -240,6 +240,26 @@ while ( count( $events ) < 3 ) {
 				</tr>
 			</table>
 
+			<h2><?php esc_html_e( 'خبرم کن', 'seyedcast' ); ?></h2>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'دکمه اطلاع‌رسانی', 'seyedcast' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="seyedcast_settings[notify_enabled]" value="1" <?php checked( ! empty( $settings['notify_enabled'] ) ); ?> />
+							<?php esc_html_e( 'نمایش دکمه «پادکست جدید اومد خبرم کن» در صفحه اصلی و صفحه هر پادکست', 'seyedcast' ); ?>
+						</label>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="seyedcast_notify_button_text"><?php esc_html_e( 'متن دکمه', 'seyedcast' ); ?></label></th>
+					<td>
+						<input type="text" class="regular-text" id="seyedcast_notify_button_text" name="seyedcast_settings[notify_button_text]" value="<?php echo esc_attr( isset( $settings['notify_button_text'] ) ? $settings['notify_button_text'] : '' ); ?>" />
+						<p class="description"><?php esc_html_e( 'لیست ثبت‌نام‌ها در منوی «اطلاع‌رسانی» افزونه قابل مشاهده است.', 'seyedcast' ); ?></p>
+					</td>
+				</tr>
+			</table>
+
 			<h2><?php esc_html_e( 'بنرهای سایدبار (حداکثر ۳)', 'seyedcast' ); ?></h2>
 			<?php foreach ( $banners as $i => $banner ) : ?>
 				<?php

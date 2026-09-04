@@ -11,6 +11,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-stats.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-listen-stats.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-notify-leads.php';
 
 global $wpdb;
 
@@ -34,6 +35,7 @@ $wpdb->query(
 
 Seyedcast_Stats::drop_table();
 Seyedcast_Listen_Stats::drop_table();
+Seyedcast_Notify_Leads::drop_table();
 
 $show_ids = get_posts(
 	array(
