@@ -467,6 +467,90 @@
 	color: var(--sc-muted);
 }
 
+.seyedcast-episode-row__progress-label:empty {
+	display: none;
+}
+
+.seyedcast-episode-row__progress-label {
+	color: var(--sc-primary);
+	font-weight: 700;
+}
+
+.seyedcast-episode-row__progress {
+	height: 3px;
+	width: 100%;
+	max-width: 220px;
+	margin-top: 0.35rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--sc-text) 10%, transparent);
+	overflow: hidden;
+}
+
+.seyedcast-episode-row__progress-bar {
+	display: block;
+	height: 100%;
+	width: 0;
+	border-radius: inherit;
+	background: var(--sc-primary);
+	transition: width 0.25s var(--sc-ease);
+}
+
+.seyedcast-episode-row.is-finished .seyedcast-episode-row__progress-bar {
+	background: color-mix(in srgb, var(--sc-primary) 70%, #8be28b);
+}
+
+.seyedcast-section-head--episodes {
+	align-items: flex-end;
+	gap: 0.75rem 1rem;
+	flex-wrap: wrap;
+}
+
+.seyedcast-section-head__titles {
+	display: flex;
+	align-items: baseline;
+	gap: 0.65rem;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+
+.seyedcast-episode-sort {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.2rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--sc-surface) 88%, transparent);
+	border: 1px solid var(--sc-line);
+}
+
+.seyedcast-episode-sort__btn {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	color: var(--sc-muted);
+	font: inherit;
+	font-size: 0.8rem;
+	font-weight: 700;
+	padding: 0.35rem 0.7rem;
+	border-radius: 999px;
+	cursor: pointer;
+	transition: background 0.2s var(--sc-ease), color 0.2s var(--sc-ease);
+}
+
+.seyedcast-episode-sort__btn.is-active,
+.seyedcast-episode-sort__btn:hover {
+	color: var(--sc-text);
+	background: color-mix(in srgb, var(--sc-primary) 16%, transparent);
+}
+
+.seyedcast-comments__intro {
+	margin: -0.35rem 0 1rem;
+	color: var(--sc-muted);
+	font-size: 0.9rem;
+	line-height: 1.7;
+	max-width: 40rem;
+}
+
 .seyedcast-play-btn {
 	width: 44px;
 	height: 44px;
@@ -559,6 +643,19 @@
 	-webkit-backdrop-filter: blur(8px);
 }
 
+.seyedcast-btn--outline {
+	background: transparent;
+	color: var(--sc-text);
+	border: 1.5px solid color-mix(in srgb, var(--sc-primary) 65%, var(--sc-line));
+	box-shadow: none;
+}
+
+.seyedcast-btn--outline:hover {
+	background: color-mix(in srgb, var(--sc-primary) 12%, transparent);
+	border-color: var(--sc-primary);
+	filter: none;
+}
+
 .seyedcast-btn--lg {
 	padding: 0.88rem 1.45rem;
 	font-size: 1rem;
@@ -612,6 +709,44 @@
 	color: var(--sc-muted);
 	padding: 2rem 0;
 	text-align: center;
+}
+
+.seyedcast-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 0.55rem;
+	padding: 2.25rem 1.25rem;
+	border-radius: 20px;
+	border: 1px dashed color-mix(in srgb, var(--sc-line) 90%, var(--sc-primary));
+	background:
+		radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--sc-primary) 12%, transparent), transparent 55%),
+		var(--sc-surface);
+	grid-column: 1 / -1;
+}
+
+.seyedcast-empty-state--wide {
+	padding: 2.75rem 1.5rem;
+}
+
+.seyedcast-empty-state__art {
+	color: var(--sc-primary);
+	margin-bottom: 0.35rem;
+	opacity: 0.9;
+}
+
+.seyedcast-empty-state__title {
+	margin: 0;
+	font-size: 1.15rem;
+}
+
+.seyedcast-empty-state__text {
+	margin: 0 0 0.55rem;
+	max-width: 28rem;
+	color: var(--sc-muted);
+	font-size: 0.94rem;
+	line-height: 1.7;
 }
 
 body.seyedcast-player-open .seyedcast-app {
@@ -912,9 +1047,125 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 }
 
 .seyedcast-shell.is-navigating {
-	opacity: 0.72;
 	pointer-events: none;
+}
+
+.seyedcast-app-stage.is-skeleton > :not(#seyedcast-nav-skeleton) {
+	opacity: 0.28;
+	filter: saturate(0.7);
 	transition: opacity 0.2s var(--sc-ease);
+}
+
+.seyedcast-skeleton {
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	padding: 0.25rem 0 1rem;
+	pointer-events: none;
+	animation: seyedcast-fade-up 0.35s var(--sc-ease) both;
+}
+
+.seyedcast-app-stage {
+	position: relative;
+}
+
+.seyedcast-skeleton__hero {
+	display: grid;
+	grid-template-columns: 160px minmax(0, 1fr);
+	gap: 1.1rem;
+	align-items: center;
+	margin-bottom: 1.5rem;
+	padding: 1rem;
+	border-radius: 20px;
+	background: color-mix(in srgb, var(--sc-surface) 80%, transparent);
+	border: 1px solid var(--sc-line);
+}
+
+.seyedcast-skeleton__block {
+	background: linear-gradient(
+		90deg,
+		color-mix(in srgb, var(--sc-text) 6%, transparent) 0%,
+		color-mix(in srgb, var(--sc-text) 12%, transparent) 45%,
+		color-mix(in srgb, var(--sc-text) 6%, transparent) 100%
+	);
+	background-size: 200% 100%;
+	animation: seyedcast-shimmer 1.2s ease-in-out infinite;
+	border-radius: 12px;
+}
+
+.seyedcast-skeleton__cover {
+	aspect-ratio: 1 / 1;
+	width: 100%;
+	border-radius: 16px;
+}
+
+.seyedcast-skeleton__lines {
+	display: flex;
+	flex-direction: column;
+	gap: 0.65rem;
+	min-width: 0;
+}
+
+.seyedcast-skeleton__line {
+	height: 14px;
+	width: 72%;
+}
+
+.seyedcast-skeleton__line--lg {
+	height: 22px;
+	width: 88%;
+}
+
+.seyedcast-skeleton__line--sm {
+	width: 44%;
+}
+
+.seyedcast-skeleton__actions {
+	display: flex;
+	gap: 0.55rem;
+	margin-top: 0.45rem;
+}
+
+.seyedcast-skeleton__pill {
+	height: 42px;
+	width: 132px;
+	border-radius: 999px;
+}
+
+.seyedcast-skeleton__pill--ghost {
+	width: 110px;
+	opacity: 0.7;
+}
+
+.seyedcast-skeleton__grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 0.85rem;
+}
+
+.seyedcast-skeleton__card {
+	aspect-ratio: 1 / 1;
+	border-radius: 16px;
+}
+
+@keyframes seyedcast-shimmer {
+	0% { background-position: 100% 0; }
+	100% { background-position: -100% 0; }
+}
+
+@media (max-width: 720px) {
+	.seyedcast-skeleton__hero {
+		grid-template-columns: 1fr;
+	}
+
+	.seyedcast-skeleton__cover {
+		max-width: 180px;
+		margin: 0 auto;
+	}
+
+	.seyedcast-skeleton__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
 }
 
 .seyedcast-shell .screen-reader-text {
@@ -1784,6 +2035,12 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 .seyedcast-hero__actions .seyedcast-notify,
 .seyedcast-featured__actions .seyedcast-notify {
 	flex: 0 1 auto;
+}
+
+.seyedcast-hero__actions .seyedcast-notify .seyedcast-btn,
+.seyedcast-featured__actions .seyedcast-notify .seyedcast-btn,
+.seyedcast-empty-state .seyedcast-notify .seyedcast-btn {
+	width: 100%;
 }
 
 .seyedcast-notify--block {

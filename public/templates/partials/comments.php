@@ -3,7 +3,9 @@
  * Comments section for archive / single surfaces.
  *
  * @package Seyedcast
- * @var int|null $seyedcast_comment_post_id Optional post ID override (archive board).
+ * @var int|null    $seyedcast_comment_post_id Optional post ID override (archive board).
+ * @var string|null $seyedcast_comments_title  Optional heading override.
+ * @var string|null $seyedcast_comments_intro  Optional intro text under heading.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -43,10 +45,15 @@ $comments = get_comments(
 	)
 );
 $count = count( $comments );
+
+$heading = ! empty( $seyedcast_comments_title )
+	? $seyedcast_comments_title
+	: __( 'نظرات', 'seyedcast' );
+$intro   = ! empty( $seyedcast_comments_intro ) ? $seyedcast_comments_intro : '';
 ?>
 <section class="seyedcast-section seyedcast-comments" id="seyedcast-comments" data-seyedcast-comments>
 	<div class="seyedcast-section-head">
-		<h2><?php esc_html_e( 'نظرات', 'seyedcast' ); ?></h2>
+		<h2><?php echo esc_html( $heading ); ?></h2>
 		<span class="seyedcast-section-head__hint">
 			<?php
 			echo esc_html(
@@ -59,6 +66,10 @@ $count = count( $comments );
 			?>
 		</span>
 	</div>
+
+	<?php if ( $intro ) : ?>
+		<p class="seyedcast-comments__intro"><?php echo esc_html( $intro ); ?></p>
+	<?php endif; ?>
 
 	<?php if ( $comments ) : ?>
 		<ol class="seyedcast-comment-list">

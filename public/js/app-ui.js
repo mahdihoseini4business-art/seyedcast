@@ -177,40 +177,221 @@
 		});
 	}
 
+	function canNativeShare() {
+		return typeof navigator.share === 'function';
+	}
+
+	function markShareButton(btn, shortLabel) {
+		if (!btn) {
+			return;
+		}
+		var labelEl = btn.querySelector('[data-role="label"]');
+		if (labelEl) {
+			if (!btn._seyedcastShareLabel) {
+				btn._seyedcastShareLabel = labelEl.textContent;
+			}
+			labelEl.textContent = shortLabel;
+			btn.classList.add('is-copied');
+			window.setTimeout(function () {
+				btn.classList.remove('is-copied');
+				labelEl.textContent = btn._seyedcastShareLabel;
+			}, 1800);
+		} else {
+			btn.classList.add('is-copied');
+			window.setTimeout(function () {
+				btn.classList.remove('is-copied');
+			}, 1200);
+		}
+	}
+
+	function sharePayload(opts) {
+		opts = opts || {};
+		var url = opts.url || window.location.href;
+		var title = opts.title || document.title || '';
+		var text = opts.text || '';
+		var btn = opts.button || null;
+		var i18n = cfg.i18n || {};
+
+		function afterCopy() {
+			showToast(i18n.shareCopied || 'لینک کپی شد — با دوستانت به اشتراک بگذار', true);
+			markShareButton(btn, i18n.shareCopiedShort || 'کپی شد ✓');
+			return { method: 'copy' };
+		}
+
+		function fail() {
+			showToast(i18n.shareFail || 'کپی لینک ممکن نشد', false);
+			return { method: 'fail' };
+		}
+
+		if (canNativeShare()) {
+			return navigator
+				.share({
+					title: title,
+					text: text ? text + '\n' + url : url,
+					url: url
+				})
+				.then(function () {
+					markShareButton(btn, i18n.shareNative || 'ارسال شد ✓');
+					return { method: 'native' };
+				})
+				.catch(function (err) {
+					if (err && err.name === 'AbortError') {
+						return { method: 'abort' };
+					}
+					return copyText(url).then(afterCopy).catch(fail);
+				});
+		}
+
+		return copyText(url).then(afterCopy).catch(fail);
+	}
+
 	function initShare() {
+		window.SeyedcastShare = {
+			share: sharePayload,
+			copy: copyText,
+			toast: showToast
+		};
+
 		document.addEventListener('click', function (e) {
 			var btn = e.target.closest('[data-seyedcast-share]');
 			if (!btn) {
 				return;
 			}
-			e.preventDefault();
-			var url = btn.getAttribute('data-share-url') || window.location.href;
-			var labelEl = btn.querySelector('[data-role="label"]');
-			var defaultLabel =
-				(cfg.i18n && cfg.i18n.shareLabel) || (labelEl ? labelEl.textContent : 'انتشار پادکست');
-			if (labelEl && !btn._seyedcastShareLabel) {
-				btn._seyedcastShareLabel = labelEl.textContent;
+			// Sticky player share uses data-action="share" instead.
+			if (btn.closest('#seyedcast-sticky-player')) {
+				return;
 			}
-			copyText(url)
-				.then(function () {
-					showToast(
-						(cfg.i18n && cfg.i18n.shareCopied) || 'لینک کپی شد — با دوستانت به اشتراک بگذار',
-						true
-					);
-					btn.classList.add('is-copied');
-					if (labelEl) {
-						labelEl.textContent = (cfg.i18n && cfg.i18n.shareCopiedShort) || 'کپی شد ✓';
-					}
-					window.setTimeout(function () {
-						btn.classList.remove('is-copied');
-						if (labelEl) {
-							labelEl.textContent = btn._seyedcastShareLabel || defaultLabel;
-						}
-					}, 1800);
-				})
-				.catch(function () {
-					showToast((cfg.i18n && cfg.i18n.shareFail) || 'کپی لینک ممکن نشد', false);
+			e.preventDefault();
+			sharePayload({
+				url: btn.getAttribute('data-share-url') || window.location.href,
+				title: btn.getAttribute('data-share-title') || document.title || '',
+				text: btn.getAttribute('data-share-text') || '',
+				button: btn
+			});
+		});
+	}
+
+	function loadProgressMap() {
+		try {
+			var raw = localStorage.getItem(cfg.progressKey || 'seyedcast_episode_progress_v1');
+			if (!raw) {
+				return {};
+			}
+			var map = JSON.parse(raw);
+			return map && typeof map === 'object' && !Array.isArray(map) ? map : {};
+		} catch (e) {
+			return {};
+		}
+	}
+
+	function paintEpisodeProgress(root) {
+		var map = loadProgressMap();
+		(root || document).querySelectorAll('.seyedcast-episode-row[data-episode-id]').forEach(function (row) {
+			var id = row.getAttribute('data-episode-id');
+			var entry = map[id];
+			var wrap = row.querySelector('[data-role="progress"]');
+			var bar = row.querySelector('[data-role="progress-bar"]');
+			var label = row.querySelector('[data-role="progress-label"]');
+			if (!wrap || !bar) {
+				return;
+			}
+			var pct = entry && entry.pct ? parseInt(entry.pct, 10) : 0;
+			if (pct < 2) {
+				wrap.hidden = true;
+				row.classList.remove('is-progress', 'is-finished');
+				if (label) {
+					label.hidden = true;
+					label.textContent = '';
+				}
+				return;
+			}
+			wrap.hidden = false;
+			row.classList.add('is-progress');
+			var done = pct >= 97;
+			row.classList.toggle('is-finished', done);
+			bar.style.width = (done ? 100 : pct) + '%';
+			if (label) {
+				label.hidden = false;
+				label.textContent = done
+					? (cfg.i18n && cfg.i18n.progressDone) || 'گوش داده‌اید'
+					: pct + '%';
+			}
+		});
+	}
+
+	function initEpisodeProgress() {
+		document.addEventListener('seyedcast:progress', function () {
+			paintEpisodeProgress(document);
+		});
+	}
+
+	function applyEpisodeSort(list, mode) {
+		var rows = Array.prototype.slice.call(list.querySelectorAll('.seyedcast-episode-row'));
+		rows.sort(function (a, b) {
+			var na = parseFloat(a.getAttribute('data-number')) || 0;
+			var nb = parseFloat(b.getAttribute('data-number')) || 0;
+			var da = parseInt(a.getAttribute('data-date'), 10) || 0;
+			var db = parseInt(b.getAttribute('data-date'), 10) || 0;
+			if (mode === 'oldest') {
+				return da - db || na - nb;
+			}
+			if (mode === 'number') {
+				return nb - na || db - da;
+			}
+			// newest (default by date)
+			return db - da || nb - na;
+		});
+		rows.forEach(function (row, i) {
+			list.appendChild(row);
+			var index = row.querySelector('.seyedcast-episode-row__index');
+			if (index) {
+				index.textContent = String(i + 1);
+			}
+		});
+	}
+
+	function initEpisodeSort(root) {
+		(root || document).querySelectorAll('[data-seyedcast-episode-sort]').forEach(function (wrap) {
+			if (wrap._seyedcastBound) {
+				return;
+			}
+			wrap._seyedcastBound = true;
+			var list =
+				wrap.closest('.seyedcast-section') &&
+				wrap.closest('.seyedcast-section').querySelector('[data-seyedcast-episode-list]');
+			if (!list) {
+				return;
+			}
+			var stored = 'newest';
+			try {
+				stored = localStorage.getItem('seyedcast_episode_sort_v1') || 'newest';
+			} catch (e) {
+				stored = 'newest';
+			}
+			if (['newest', 'oldest', 'number'].indexOf(stored) === -1) {
+				stored = 'newest';
+			}
+			wrap.querySelectorAll('[data-sort]').forEach(function (btn) {
+				btn.classList.toggle('is-active', btn.getAttribute('data-sort') === stored);
+			});
+			applyEpisodeSort(list, stored);
+
+			wrap.addEventListener('click', function (e) {
+				var btn = e.target.closest('[data-sort]');
+				if (!btn) {
+					return;
+				}
+				var mode = btn.getAttribute('data-sort');
+				wrap.querySelectorAll('[data-sort]').forEach(function (el) {
+					el.classList.toggle('is-active', el === btn);
 				});
+				applyEpisodeSort(list, mode);
+				try {
+					localStorage.setItem('seyedcast_episode_sort_v1', mode);
+				} catch (err) {
+					/* ignore */
+				}
+			});
 		});
 	}
 
@@ -654,11 +835,14 @@
 		initBannerSlider(scope);
 		initSuggestions(scope);
 		initContinueListening(scope);
+		initEpisodeSort(scope);
+		paintEpisodeProgress(scope);
 	}
 
 	initSidebar();
 	initSearch();
 	initShare();
+	initEpisodeProgress();
 	boot(document);
 	document.addEventListener('seyedcast:navigated', function () {
 		if (sliderTimer) {

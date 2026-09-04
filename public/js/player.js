@@ -5,6 +5,7 @@
 	var storageKey = cfg.storageKey || 'seyedcast_player_state_v1';
 	var historyKey = cfg.historyKey || 'seyedcast_listen_history_v1';
 	var listenerKey = cfg.listenerKey || 'seyedcast_listener_id_v1';
+	var progressKey = cfg.progressKey || 'seyedcast_episode_progress_v1';
 	var ajaxUrl = cfg.ajaxUrl || '';
 	var progressAction = cfg.progressAction || 'seyedcast_listen_progress';
 	var root = document.getElementById('seyedcast-sticky-player');
@@ -65,6 +66,8 @@
 
 	function save() {
 		try {
+			var position = audio.currentTime || state.position || 0;
+			var duration = isFinite(audio.duration) ? audio.duration : state.duration || 0;
 			localStorage.setItem(
 				storageKey,
 				JSON.stringify({
@@ -75,10 +78,62 @@
 					audio: state.audio,
 					cover: state.cover,
 					permalink: state.permalink,
-					position: audio.currentTime || state.position || 0,
-					duration: isFinite(audio.duration) ? audio.duration : state.duration || 0,
+					position: position,
+					duration: duration,
 					rate: audio.playbackRate || state.rate || 1,
 					playing: !audio.paused
+				})
+			);
+			saveEpisodeProgress(state.id, position, duration);
+		} catch (e) {
+			/* ignore */
+		}
+	}
+
+	function saveEpisodeProgress(episodeId, position, duration) {
+		episodeId = parseInt(episodeId, 10) || 0;
+		if (!episodeId) {
+			return;
+		}
+		var pct = 0;
+		if (duration > 0 && isFinite(duration)) {
+			pct = Math.min(100, Math.max(0, Math.round((position / duration) * 100)));
+		}
+		try {
+			var map = {};
+			var raw = localStorage.getItem(progressKey);
+			if (raw) {
+				map = JSON.parse(raw) || {};
+			}
+			if (typeof map !== 'object' || Array.isArray(map)) {
+				map = {};
+			}
+			if (pct < 1) {
+				delete map[String(episodeId)];
+			} else {
+				map[String(episodeId)] = {
+					pct: pct,
+					position: position,
+					duration: duration,
+					updated: Date.now()
+				};
+			}
+			// Cap map size.
+			var keys = Object.keys(map);
+			if (keys.length > 80) {
+				keys
+					.sort(function (a, b) {
+						return (map[a].updated || 0) - (map[b].updated || 0);
+					})
+					.slice(0, keys.length - 80)
+					.forEach(function (k) {
+						delete map[k];
+					});
+			}
+			localStorage.setItem(progressKey, JSON.stringify(map));
+			document.dispatchEvent(
+				new CustomEvent('seyedcast:progress', {
+					detail: { id: episodeId, pct: pct, map: map }
 				})
 			);
 		} catch (e) {
@@ -306,6 +361,16 @@
 		}
 		syncSpeedSelects(state.rate || 1);
 		updateMediaSessionMetadata();
+		root.querySelectorAll('[data-action="share"]').forEach(function (btn) {
+			if (state.permalink) {
+				btn.setAttribute('data-share-url', state.permalink);
+				btn.setAttribute('data-share-title', state.title || '');
+				btn.setAttribute('data-share-text', state.show || '');
+				btn.hidden = false;
+			} else {
+				btn.hidden = true;
+			}
+		});
 	}
 
 	function showPlayer() {
@@ -494,6 +559,22 @@
 			audio.currentTime = Math.min(audio.duration || audio.currentTime + 30, audio.currentTime + 30);
 		} else if (action === 'close') {
 			hidePlayer();
+		} else if (action === 'share') {
+			e.preventDefault();
+			var shareUrl = btn.getAttribute('data-share-url') || state.permalink || '';
+			if (!shareUrl) {
+				return;
+			}
+			if (window.SeyedcastShare && typeof window.SeyedcastShare.share === 'function') {
+				window.SeyedcastShare.share({
+					url: shareUrl,
+					title: btn.getAttribute('data-share-title') || state.title || '',
+					text: btn.getAttribute('data-share-text') || state.show || '',
+					button: btn
+				});
+			} else if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(shareUrl).catch(function () {});
+			}
 		}
 	});
 
@@ -540,6 +621,15 @@
 		setProgress(pct);
 		setTimes(audio.currentTime, audio.duration);
 		scheduleProgressSync();
+		if (!audio._seyedcastProgTick) {
+			audio._seyedcastProgTick = true;
+			window.setTimeout(function () {
+				audio._seyedcastProgTick = false;
+				if (state.id && isFinite(audio.duration) && audio.duration > 0) {
+					saveEpisodeProgress(state.id, audio.currentTime, audio.duration);
+				}
+			}, 4000);
+		}
 	});
 
 	audio.addEventListener('loadedmetadata', function () {

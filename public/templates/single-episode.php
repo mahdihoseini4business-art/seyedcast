@@ -59,6 +59,12 @@ ob_start();
 						array(
 							'seyedcast_share_url'   => get_permalink( $episode ),
 							'seyedcast_share_label' => __( 'انتشار پادکست', 'seyedcast' ),
+							'seyedcast_share_title' => get_the_title( $episode ),
+							'seyedcast_share_text'  => $show ? sprintf(
+								/* translators: %s: show title */
+								__( 'اپیزودی از «%s»:', 'seyedcast' ),
+								get_the_title( $show )
+							) : __( 'این اپیزود رو گوش بده:', 'seyedcast' ),
 						)
 					);
 					?>
