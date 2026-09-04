@@ -52,6 +52,8 @@ class Seyedcast_Settings {
 			'upcoming_events'      => array(),
 			'suggestions_enabled'  => 1,
 			'comments_enabled'     => 1,
+			'notify_enabled'       => 0,
+			'notify_button_text'   => 'پادکست جدید اومد خبرم کن',
 			'view_count_mode'      => 'unique',
 			'pwa_enabled'          => 1,
 			'pwa_prompt'        => 1,
@@ -270,6 +272,13 @@ class Seyedcast_Settings {
 			$out['featured_cta']     = isset( $input['featured_cta'] ) ? sanitize_text_field( $input['featured_cta'] ) : $defaults['featured_cta'];
 			$out['suggestions_enabled'] = ! empty( $input['suggestions_enabled'] ) ? 1 : 0;
 			$out['comments_enabled']    = ! empty( $input['comments_enabled'] ) ? 1 : 0;
+			$out['notify_enabled']      = ! empty( $input['notify_enabled'] ) ? 1 : 0;
+			$out['notify_button_text']  = isset( $input['notify_button_text'] )
+				? sanitize_text_field( $input['notify_button_text'] )
+				: $defaults['notify_button_text'];
+			if ( '' === $out['notify_button_text'] ) {
+				$out['notify_button_text'] = $defaults['notify_button_text'];
+			}
 
 			$view_mode = isset( $input['view_count_mode'] ) ? sanitize_key( $input['view_count_mode'] ) : 'unique';
 			$out['view_count_mode']    = in_array( $view_mode, array( 'unique', 'total' ), true ) ? $view_mode : 'unique';
@@ -322,6 +331,8 @@ class Seyedcast_Settings {
 			$out['upcoming_events']     = $existing['upcoming_events'];
 			$out['suggestions_enabled'] = isset( $existing['suggestions_enabled'] ) ? (int) $existing['suggestions_enabled'] : 1;
 			$out['comments_enabled']    = isset( $existing['comments_enabled'] ) ? (int) $existing['comments_enabled'] : 1;
+			$out['notify_enabled']      = isset( $existing['notify_enabled'] ) ? (int) $existing['notify_enabled'] : 0;
+			$out['notify_button_text']  = isset( $existing['notify_button_text'] ) ? $existing['notify_button_text'] : $defaults['notify_button_text'];
 			$out['view_count_mode']     = isset( $existing['view_count_mode'] ) ? $existing['view_count_mode'] : 'unique';
 		}
 

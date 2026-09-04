@@ -3,7 +3,7 @@
  * Plugin Name: Seyedcast
  * Plugin URI:  https://seyedcast.local
  * Description: Educational podcasts with shows, sticky player, design themes, and PWA install.
- * Version:     1.3.3
+ * Version:     1.4.0
  * Author:      Seyedcast
  * Text Domain: seyedcast
  * Domain Path: /languages
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SEYEDCAST_VERSION', '1.3.3' );
+define( 'SEYEDCAST_VERSION', '1.4.0' );
 define( 'SEYEDCAST_FILE', __FILE__ );
 define( 'SEYEDCAST_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SEYEDCAST_URL', plugin_dir_url( __FILE__ ) );
@@ -42,6 +42,7 @@ function seyedcast_load_files() {
 		'includes/class-templates.php',
 		'includes/class-stats.php',
 		'includes/class-listen-stats.php',
+		'includes/class-notify-leads.php',
 		'includes/class-app.php',
 		'includes/class-pwa.php',
 		'includes/class-shortcode.php',
