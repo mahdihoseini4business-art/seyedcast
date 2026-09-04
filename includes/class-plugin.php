@@ -33,6 +33,23 @@ class Seyedcast_Plugin {
 		new Seyedcast_App();
 		new Seyedcast_Pwa();
 		new Seyedcast_Shortcode();
+
+		add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), 20 );
+	}
+
+	/**
+	 * One-shot upgrade tasks (rewrite flush for PWA endpoints, etc.).
+	 */
+	public static function maybe_upgrade() {
+		$stored = get_option( 'seyedcast_db_version', '' );
+		if ( version_compare( (string) $stored, SEYEDCAST_VERSION, '>=' ) ) {
+			return;
+		}
+		Seyedcast_Rewrite::add_rules();
+		add_rewrite_rule( '^seyedcast-manifest\.webmanifest$', 'index.php?seyedcast_manifest=1', 'top' );
+		add_rewrite_rule( '^seyedcast-sw\.js$', 'index.php?seyedcast_sw=1', 'top' );
+		flush_rewrite_rules( false );
+		update_option( 'seyedcast_db_version', SEYEDCAST_VERSION, true );
 	}
 
 	/**

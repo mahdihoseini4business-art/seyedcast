@@ -348,8 +348,12 @@ class Seyedcast_Settings {
 	public function maybe_flush_rewrites( $old, $new ) {
 		$old_slug = is_array( $old ) && isset( $old['base_slug'] ) ? $old['base_slug'] : '';
 		$new_slug = is_array( $new ) && isset( $new['base_slug'] ) ? $new['base_slug'] : '';
-		if ( $old_slug !== $new_slug ) {
+		$old_pwa  = is_array( $old ) && ! empty( $old['pwa_enabled'] );
+		$new_pwa  = is_array( $new ) && ! empty( $new['pwa_enabled'] );
+		if ( $old_slug !== $new_slug || $old_pwa !== $new_pwa ) {
 			Seyedcast_Rewrite::add_rules();
+			add_rewrite_rule( '^seyedcast-manifest\.webmanifest$', 'index.php?seyedcast_manifest=1', 'top' );
+			add_rewrite_rule( '^seyedcast-sw\.js$', 'index.php?seyedcast_sw=1', 'top' );
 			flush_rewrite_rules();
 		}
 	}

@@ -464,6 +464,35 @@ body.seyedcast-preset-soundcloud .seyedcast-pwa-prompt__card {
 	flex-wrap: wrap;
 }
 
+/* Fallback button look if theme tokens are missing */
+.seyedcast-pwa-prompt .seyedcast-btn {
+	border: 0;
+	border-radius: 999px;
+	padding: 0.62rem 1.15rem;
+	cursor: pointer;
+	font-family: inherit;
+	font-size: 0.94rem;
+	font-weight: 700;
+	line-height: 1.4;
+	background: color-mix(in srgb, var(--sc-text, #fff) 12%, var(--sc-surface, #222));
+	color: var(--sc-text, #fff);
+}
+
+.seyedcast-pwa-prompt .seyedcast-btn--primary {
+	background: var(--sc-primary, #1ed760);
+	color: #fff;
+	box-shadow: 0 8px 20px color-mix(in srgb, var(--sc-primary, #1ed760) 35%, transparent);
+}
+
+.seyedcast-pwa-prompt .seyedcast-btn--ghost {
+	background: color-mix(in srgb, var(--sc-surface, #181818) 70%, transparent);
+	border: 1px solid var(--sc-line, rgba(255, 255, 255, 0.14));
+}
+
+.seyedcast-pwa-prompt.is-update .seyedcast-pwa-prompt__title {
+	color: var(--sc-primary, #1ed760);
+}
+
 @keyframes seyedcast-slide-up {
 	from { opacity: 0; transform: translateY(12px); }
 	to { opacity: 1; transform: translateY(0); }

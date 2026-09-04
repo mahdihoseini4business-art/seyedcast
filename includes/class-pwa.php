@@ -1,6 +1,6 @@
 <?php
 /**
- * PWA manifest, service worker, install prompt.
+ * PWA manifest, service worker, install prompt, new-episode toast.
  *
  * @package Seyedcast
  */
@@ -19,11 +19,15 @@ class Seyedcast_Pwa {
 	 */
 	public function __construct() {
 		add_action( 'init', array( $this, 'register_endpoints' ) );
+		add_action( 'parse_request', array( $this, 'maybe_serve_from_path' ), 1 );
 		add_action( 'wp_head', array( $this, 'head_tags' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_prompt' ) );
-		add_action( 'wp_footer', array( $this, 'prompt_markup' ), 20 );
+		// Markup must print BEFORE footer scripts (priority 20), otherwise JS exits with no root.
+		add_action( 'wp_footer', array( $this, 'prompt_markup' ), 5 );
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'serve_endpoints' ) );
+		add_action( 'wp_ajax_seyedcast_latest_episode', array( $this, 'ajax_latest_episode' ) );
+		add_action( 'wp_ajax_nopriv_seyedcast_latest_episode', array( $this, 'ajax_latest_episode' ) );
 	}
 
 	/**
@@ -47,7 +51,31 @@ class Seyedcast_Pwa {
 	}
 
 	/**
-	 * Serve manifest / SW.
+	 * Serve SW/manifest by path when rewrite rules are missing/unflushed.
+	 *
+	 * @param WP $wp WP request.
+	 */
+	public function maybe_serve_from_path( $wp ) {
+		if ( ! $this->enabled() ) {
+			return;
+		}
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
+		if ( '' === $path ) {
+			return;
+		}
+		if ( preg_match( '#/seyedcast-manifest\.webmanifest$#', $path ) ) {
+			$this->output_manifest();
+			exit;
+		}
+		if ( preg_match( '#/seyedcast-sw\.js$#', $path ) ) {
+			$this->output_sw();
+			exit;
+		}
+	}
+
+	/**
+	 * Serve manifest / SW via query vars.
 	 */
 	public function serve_endpoints() {
 		if ( get_query_var( 'seyedcast_manifest' ) ) {
@@ -91,16 +119,17 @@ class Seyedcast_Pwa {
 	}
 
 	/**
-	 * Enqueue install prompt script on podcast pages.
+	 * Enqueue PWA script on podcast pages (install prompt + update check).
 	 */
 	public function enqueue_prompt() {
-		$settings = Seyedcast_Settings::get();
-		if ( ! $this->enabled() || empty( $settings['pwa_prompt'] ) ) {
+		if ( ! $this->enabled() ) {
 			return;
 		}
 		if ( ! Seyedcast_Assets::is_seyedcast_context() ) {
 			return;
 		}
+
+		$settings = Seyedcast_Settings::get();
 
 		wp_enqueue_script(
 			'seyedcast-pwa-prompt',
@@ -110,35 +139,51 @@ class Seyedcast_Pwa {
 			true
 		);
 
+		$current_episode = 0;
+		if ( is_singular( 'seyedcast_episode' ) ) {
+			$current_episode = (int) get_queried_object_id();
+		}
+
 		wp_localize_script(
 			'seyedcast-pwa-prompt',
 			'seyedcastPwa',
 			array(
-				'swUrl'      => home_url( '/seyedcast-sw.js' ),
-				'swScope'    => trailingslashit( (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' ) ),
-				'storageKey' => 'seyedcast_pwa_prompt_dismissed',
-				'iconUrl'    => $this->icon_url( 192 ),
-				'delayMs'    => 1500,
-				'isIos'      => $this->is_ios(),
-				'i18n'       => array(
-					'title'       => __( 'نصب روی موبایل', 'seyedcast' ),
-					'message'     => __( 'برای دسترسی سریع‌تر، پادکست را به صفحه اصلی گوشی اضافه کنید.', 'seyedcast' ),
-					'install'     => __( 'افزودن به صفحه اصلی', 'seyedcast' ),
-					'later'       => __( 'بعداً', 'seyedcast' ),
-					'close'       => __( 'بستن', 'seyedcast' ),
-					'iosHint'     => __( 'در Safari دکمه Share (مربع با فلش) را بزنید، سپس «Add to Home Screen» را انتخاب کنید.', 'seyedcast' ),
-					'androidHint' => __( 'منوی مرورگر (⋮) را باز کنید و «نصب برنامه» یا «افزودن به صفحه اصلی» را بزنید.', 'seyedcast' ),
+				'swUrl'            => home_url( '/seyedcast-sw.js' ),
+				'swScope'          => trailingslashit( (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' ) ),
+				'ajaxUrl'          => admin_url( 'admin-ajax.php' ),
+				'latestAction'     => 'seyedcast_latest_episode',
+				'promptEnabled'    => ! empty( $settings['pwa_prompt'] ) ? 1 : 0,
+				'storageKey'       => 'seyedcast_pwa_prompt_dismissed',
+				'snoozeKey'        => 'seyedcast_pwa_prompt_snooze',
+				'seenKey'          => 'seyedcast_last_seen_episode',
+				'snoozeDays'       => 3,
+				'iconUrl'          => $this->icon_url( 192 ),
+				'delayMs'          => 1500,
+				'isIos'            => $this->is_ios(),
+				'currentEpisodeId' => $current_episode,
+				'i18n'             => array(
+					'title'          => __( 'نصب روی موبایل', 'seyedcast' ),
+					'message'        => __( 'برای دسترسی سریع‌تر، پادکست را به صفحه اصلی گوشی اضافه کنید.', 'seyedcast' ),
+					'install'        => __( 'افزودن به صفحه اصلی', 'seyedcast' ),
+					'later'          => __( 'بعداً', 'seyedcast' ),
+					'close'          => __( 'بستن', 'seyedcast' ),
+					'iosHint'        => __( 'در Safari دکمه Share (مربع با فلش) را بزنید، سپس «Add to Home Screen» را انتخاب کنید.', 'seyedcast' ),
+					'androidHint'    => __( 'منوی مرورگر (⋮) را باز کنید و «نصب برنامه» یا «افزودن به صفحه اصلی» را بزنید.', 'seyedcast' ),
+					'genericHint'    => __( 'از منوی مرورگر گزینه «Add to Home Screen» یا «نصب برنامه» را انتخاب کنید.', 'seyedcast' ),
+					'updateTitle'    => __( 'پادکست جدید اومد', 'seyedcast' ),
+					'updateMessage'  => __( 'یک اپیزود تازه منتشر شده است.', 'seyedcast' ),
+					'listen'         => __( 'گوش بده', 'seyedcast' ),
+					'dismissUpdate'  => __( 'باشه', 'seyedcast' ),
 				),
 			)
 		);
 	}
 
 	/**
-	 * Prompt shell.
+	 * Prompt / update toast shell.
 	 */
 	public function prompt_markup() {
-		$settings = Seyedcast_Settings::get();
-		if ( ! $this->enabled() || empty( $settings['pwa_prompt'] ) || ! Seyedcast_Assets::is_seyedcast_context() ) {
+		if ( ! $this->enabled() || ! Seyedcast_Assets::is_seyedcast_context() ) {
 			return;
 		}
 		?>
@@ -154,7 +199,7 @@ class Seyedcast_Pwa {
 				</button>
 				<div class="seyedcast-pwa-prompt__actions">
 					<button type="button" class="seyedcast-btn seyedcast-btn--primary" data-action="install"></button>
-					<button type="button" class="seyedcast-btn" data-action="dismiss-secondary"></button>
+					<button type="button" class="seyedcast-btn seyedcast-btn--ghost" data-action="dismiss-secondary"></button>
 				</div>
 			</div>
 		</div>
@@ -162,7 +207,37 @@ class Seyedcast_Pwa {
 	}
 
 	/**
-	 * Detect iOS UA roughly.
+	 * Latest published episode for installed-PWA toast.
+	 */
+	public function ajax_latest_episode() {
+		if ( ! $this->enabled() ) {
+			wp_send_json_error( array( 'message' => 'disabled' ), 403 );
+		}
+
+		$episodes = Seyedcast_App::get_latest_episodes( 1 );
+		if ( empty( $episodes ) ) {
+			wp_send_json_success( null );
+		}
+
+		$episode = $episodes[0];
+		$payload = Seyedcast_Templates::episode_payload( $episode );
+		$show_id = ! empty( $payload['show_id'] ) ? (int) $payload['show_id'] : 0;
+
+		wp_send_json_success(
+			array(
+				'id'        => (int) $episode->ID,
+				'title'     => get_the_title( $episode ),
+				'url'       => get_permalink( $episode ),
+				'cover'     => ! empty( $payload['cover'] ) ? $payload['cover'] : $this->icon_url( 192 ),
+				'showId'    => $show_id,
+				'showTitle' => $show_id ? get_the_title( $show_id ) : '',
+				'published' => (int) get_post_time( 'U', true, $episode ),
+			)
+		);
+	}
+
+	/**
+	 * Detect iOS / iPadOS UA roughly.
 	 *
 	 * @return bool
 	 */
@@ -171,7 +246,11 @@ class Seyedcast_Pwa {
 			return false;
 		}
 		$ua = sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) );
-		return (bool) preg_match( '/iPad|iPhone|iPod/', $ua );
+		if ( preg_match( '/iPad|iPhone|iPod/', $ua ) ) {
+			return true;
+		}
+		// iPadOS 13+ may send Macintosh UA; touch heuristic is client-side.
+		return false;
 	}
 
 	/**
@@ -220,6 +299,8 @@ class Seyedcast_Pwa {
 		$settings = Seyedcast_Settings::get();
 		$base     = Seyedcast_Rewrite::base_slug();
 		$start    = home_url( user_trailingslashit( $base ) );
+		// Scope must cover podcast pages; use home path so show/episode URLs stay in-app.
+		$scope    = trailingslashit( (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' ) );
 		$icon192  = $this->icon_url( 192 );
 		$icon512  = $this->icon_url( 512 );
 
@@ -228,7 +309,7 @@ class Seyedcast_Pwa {
 			'short_name'       => $settings['pwa_short_name'],
 			'description'      => $settings['archive_title'],
 			'start_url'        => $start,
-			'scope'            => $start,
+			'scope'            => home_url( $scope ),
 			'display'          => 'standalone',
 			'orientation'      => 'portrait-primary',
 			'background_color' => $settings['pwa_bg_color'],
@@ -240,13 +321,25 @@ class Seyedcast_Pwa {
 					'src'     => $icon192,
 					'sizes'   => '192x192',
 					'type'    => $this->icon_mime( $icon192 ),
-					'purpose' => 'any maskable',
+					'purpose' => 'any',
+				),
+				array(
+					'src'     => $icon192,
+					'sizes'   => '192x192',
+					'type'    => $this->icon_mime( $icon192 ),
+					'purpose' => 'maskable',
 				),
 				array(
 					'src'     => $icon512,
 					'sizes'   => '512x512',
 					'type'    => $this->icon_mime( $icon512 ),
-					'purpose' => 'any maskable',
+					'purpose' => 'any',
+				),
+				array(
+					'src'     => $icon512,
+					'sizes'   => '512x512',
+					'type'    => $this->icon_mime( $icon512 ),
+					'purpose' => 'maskable',
 				),
 			),
 		);
@@ -265,11 +358,12 @@ class Seyedcast_Pwa {
 			return;
 		}
 
-		$cache   = 'seyedcast-static-v' . SEYEDCAST_VERSION;
-		$assets  = array(
+		$cache  = 'seyedcast-static-v' . SEYEDCAST_VERSION;
+		$assets = array(
 			SEYEDCAST_URL . 'public/css/themes.css',
 			SEYEDCAST_URL . 'public/css/player.css',
 			SEYEDCAST_URL . 'public/js/player.js',
+			SEYEDCAST_URL . 'public/js/pwa-prompt.js',
 			$this->icon_url( 192 ),
 			SEYEDCAST_URL . 'assets/icons/cover-placeholder.svg',
 		);
