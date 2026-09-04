@@ -279,6 +279,12 @@ class Seyedcast_Stats {
 			return;
 		}
 
+		// Avoid orphan daily rows for deleted/draft/wrong-type parent shows.
+		$show = get_post( $show_id );
+		if ( ! $show || 'seyedcast_show' !== $show->post_type || 'publish' !== $show->post_status ) {
+			return;
+		}
+
 		self::increment_meta( $episode_id, $is_unique );
 		self::increment_daily( $show_id, $episode_id, $is_unique );
 	}

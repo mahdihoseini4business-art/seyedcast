@@ -115,6 +115,7 @@ class Seyedcast_Pwa {
 			'seyedcastPwa',
 			array(
 				'swUrl'      => home_url( '/seyedcast-sw.js' ),
+				'swScope'    => trailingslashit( (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' ) ),
 				'storageKey' => 'seyedcast_pwa_prompt_dismissed',
 				'iconUrl'    => $this->icon_url( 192 ),
 				'delayMs'    => 1500,
@@ -273,16 +274,23 @@ class Seyedcast_Pwa {
 			SEYEDCAST_URL . 'assets/icons/cover-placeholder.svg',
 		);
 
+		$plugin_path = (string) wp_parse_url( SEYEDCAST_URL, PHP_URL_PATH );
+		$plugin_path = $plugin_path ? untrailingslashit( $plugin_path ) : '/wp-content/plugins/seyedcast';
+		$home_path   = (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' );
+		$home_path   = trailingslashit( $home_path );
+
 		header( 'Content-Type: application/javascript; charset=utf-8' );
-		header( 'Service-Worker-Allowed: /' );
+		header( 'Service-Worker-Allowed: ' . $home_path );
 		header( 'Cache-Control: no-cache' );
 
 		$assets_json = wp_json_encode( array_values( $assets ) );
 		$cache_js    = wp_json_encode( $cache );
+		$plugin_js   = wp_json_encode( $plugin_path );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JavaScript payload.
 		echo 'const CACHE = ' . $cache_js . ";\n";
 		echo 'const ASSETS = ' . $assets_json . ";\n";
+		echo 'const PLUGIN_PATH = ' . $plugin_js . ";\n";
 		echo "self.addEventListener('install', function(event) {\n";
 		echo "  event.waitUntil(caches.open(CACHE).then(function(cache) {\n";
 		echo "    return Promise.allSettled(ASSETS.map(function(url) { return cache.add(url); }));\n";
@@ -298,7 +306,8 @@ class Seyedcast_Pwa {
 		echo "  if (req.method !== 'GET') return;\n";
 		echo "  var url = new URL(req.url);\n";
 		echo "  if (url.origin !== self.location.origin) return;\n";
-		echo "  if (url.pathname.indexOf('/wp-content/plugins/seyedcast/') === -1 && url.pathname.indexOf('/seyedcast-') === -1) return;\n";
+		echo "  var path = url.pathname;\n";
+		echo "  if (path.indexOf(PLUGIN_PATH) !== 0 && path.indexOf('/seyedcast-') === -1) return;\n";
 		echo "  event.respondWith(caches.match(req).then(function(cached) {\n";
 		echo "    return cached || fetch(req).then(function(res) {\n";
 		echo "      var copy = res.clone();\n";

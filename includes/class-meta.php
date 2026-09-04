@@ -199,15 +199,18 @@ class Seyedcast_Meta {
 	/**
 	 * Episodes for a show.
 	 *
+	 * Fetches all matching episodes, sorts by episode number, then applies
+	 * $limit so a limited list is never truncated before ordering.
+	 *
 	 * @param int $show_id Show ID.
-	 * @param int $limit   Limit.
+	 * @param int $limit   Limit (-1 = all).
 	 * @return WP_Post[]
 	 */
 	public static function get_show_episodes( $show_id, $limit = -1 ) {
 		$episodes = get_posts(
 			array(
 				'post_type'      => 'seyedcast_episode',
-				'posts_per_page' => $limit,
+				'posts_per_page' => -1,
 				'post_status'    => 'publish',
 				'orderby'        => 'date',
 				'order'          => 'DESC',
@@ -225,12 +228,17 @@ class Seyedcast_Meta {
 			static function ( $a, $b ) {
 				$na = (float) get_post_meta( $a->ID, '_seyedcast_episode_number', true );
 				$nb = (float) get_post_meta( $b->ID, '_seyedcast_episode_number', true );
-					if ( $na === $nb ) {
+				if ( $na === $nb ) {
 					return ( strtotime( $b->post_date ) > strtotime( $a->post_date ) ) ? 1 : -1;
 				}
 				return ( $nb > $na ) ? 1 : -1;
 			}
 		);
+
+		$limit = (int) $limit;
+		if ( $limit > 0 ) {
+			$episodes = array_slice( $episodes, 0, $limit );
+		}
 
 		return $episodes;
 	}
