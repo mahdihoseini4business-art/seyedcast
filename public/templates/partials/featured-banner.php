@@ -79,6 +79,14 @@ $render_show_slide = static function ( $slide, $cta, $active ) {
 				<a class="seyedcast-btn seyedcast-btn--ghost" href="<?php echo esc_url( $slide['url'] ); ?>" data-seyedcast-nav>
 					<?php esc_html_e( 'مشاهده پادکست', 'seyedcast' ); ?>
 				</a>
+				<?php
+				Seyedcast_Templates::partial(
+					'notify-cta',
+					array(
+						'seyedcast_notify_show_id' => 0,
+					)
+				);
+				?>
 			</div>
 		</div>
 	</article>
@@ -120,6 +128,14 @@ $render_show_slide = static function ( $slide, $cta, $active ) {
 					<a class="seyedcast-btn seyedcast-btn--ghost" href="#" data-role="link-secondary" data-seyedcast-nav>
 						<?php esc_html_e( 'مشاهده اپیزود', 'seyedcast' ); ?>
 					</a>
+					<?php
+					Seyedcast_Templates::partial(
+						'notify-cta',
+						array(
+							'seyedcast_notify_show_id' => 0,
+						)
+					);
+					?>
 				</div>
 			</div>
 		</article>

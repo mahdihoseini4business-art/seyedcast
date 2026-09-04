@@ -777,8 +777,12 @@ body.seyedcast-preset-soundcloud .seyedcast-hero__cover {
 		width: 100%;
 	}
 
-	.seyedcast-hero__actions .seyedcast-btn {
+	.seyedcast-hero__actions .seyedcast-btn,
+	.seyedcast-hero__actions .seyedcast-notify {
 		width: 100%;
+	}
+
+	.seyedcast-hero__actions .seyedcast-btn {
 		min-height: 48px;
 		display: inline-flex;
 		align-items: center;
@@ -1582,6 +1586,23 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 		justify-content: center;
 	}
 
+	.seyedcast-featured__actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.seyedcast-featured__actions .seyedcast-btn,
+	.seyedcast-featured__actions .seyedcast-notify {
+		width: 100%;
+	}
+
+	.seyedcast-featured__actions .seyedcast-btn {
+		min-height: 48px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.seyedcast-featured__arrow--prev {
 		inset-inline-end: 0.35rem;
 	}
@@ -1755,6 +1776,11 @@ body.seyedcast-app-shell.seyedcast-sidebar-open {
 .seyedcast-notify {
 	display: inline-flex;
 	align-items: center;
+}
+
+.seyedcast-hero__actions .seyedcast-notify,
+.seyedcast-featured__actions .seyedcast-notify {
+	flex: 0 1 auto;
 }
 
 .seyedcast-notify--block {
