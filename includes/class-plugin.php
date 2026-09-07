@@ -32,6 +32,7 @@ class Seyedcast_Plugin {
 		new Seyedcast_Notify_Leads();
 		new Seyedcast_App();
 		new Seyedcast_Pwa();
+		new Seyedcast_Push();
 		new Seyedcast_Shortcode();
 
 		add_action( 'init', array( __CLASS__, 'maybe_upgrade' ), 20 );
@@ -65,6 +66,8 @@ class Seyedcast_Plugin {
 		Seyedcast_Stats::ensure_table();
 		Seyedcast_Listen_Stats::ensure_table();
 		Seyedcast_Notify_Leads::ensure_table();
+		Seyedcast_Push::ensure_table();
+		Seyedcast_Push::ensure_vapid_keys();
 
 		Seyedcast_App::ensure_comments_board();
 

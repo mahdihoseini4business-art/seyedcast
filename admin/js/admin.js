@@ -75,5 +75,35 @@
 			$('#' + target).val('');
 			$('#' + target + '_preview').empty();
 		});
+
+		$('#seyedcast-push-test').on('click', function (e) {
+			e.preventDefault();
+			var $btn = $(this);
+			var $status = $('#seyedcast-push-test-status');
+			var cfg = window.seyedcastAdmin || {};
+			if ($btn.prop('disabled')) {
+				return;
+			}
+			$btn.prop('disabled', true);
+			$status.text((cfg.i18n && cfg.i18n.pushSending) || '…');
+			$.post(cfg.ajaxUrl || ajaxurl, {
+				action: 'seyedcast_push_test',
+				nonce: cfg.pushNonce || ''
+			})
+				.done(function (res) {
+					if (res && res.success && res.data && res.data.message) {
+						$status.text(res.data.message);
+					} else {
+						var msg = (res && res.data && res.data.message) ? res.data.message : ((cfg.i18n && cfg.i18n.pushError) || 'Error');
+						$status.text(msg);
+					}
+				})
+				.fail(function () {
+					$status.text((cfg.i18n && cfg.i18n.pushError) || 'Error');
+				})
+				.always(function () {
+					$btn.prop('disabled', false);
+				});
+		});
 	});
 })(jQuery);

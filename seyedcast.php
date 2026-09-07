@@ -2,20 +2,20 @@
 /**
  * Plugin Name: Seyedcast
  * Plugin URI:  https://seyedcast.local
- * Description: Educational podcasts with shows, sticky player, design themes, and PWA install.
- * Version:     1.4.5
+ * Description: Educational podcasts with shows, sticky player, design themes, PWA install, and push notifications.
+ * Version:     1.4.6
  * Author:      Seyedcast
  * Text Domain: seyedcast
  * Domain Path: /languages
  * Requires at least: 5.8
- * Requires PHP: 7.4
+ * Requires PHP: 8.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SEYEDCAST_VERSION', '1.4.5' );
+define( 'SEYEDCAST_VERSION', '1.4.6' );
 define( 'SEYEDCAST_FILE', __FILE__ );
 define( 'SEYEDCAST_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SEYEDCAST_URL', plugin_dir_url( __FILE__ ) );
@@ -45,6 +45,7 @@ function seyedcast_load_files() {
 		'includes/class-notify-leads.php',
 		'includes/class-app.php',
 		'includes/class-pwa.php',
+		'includes/class-push.php',
 		'includes/class-shortcode.php',
 	);
 

@@ -341,6 +341,42 @@ while ( count( $events ) < 3 ) {
 					</td>
 				</tr>
 				<tr>
+					<th scope="row"><?php esc_html_e( 'پوش نوتیفیکیشن', 'seyedcast' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="seyedcast_settings[push_enabled]" value="1" <?php checked( ! empty( $settings['push_enabled'] ) ); ?> />
+							<?php esc_html_e( 'با انتشار اپیزود جدید، برای مشترکان اعلان پوش ارسال شود', 'seyedcast' ); ?>
+						</label>
+						<p class="description">
+							<?php esc_html_e( 'نیاز به HTTPS و فعال بودن PWA دارد. در iOS فقط پس از افزودن به صفحه اصلی (نسخه ۱۶.۴+) کار می‌کند.', 'seyedcast' ); ?>
+						</p>
+						<?php
+						$push_count   = class_exists( 'Seyedcast_Push', false ) ? Seyedcast_Push::subscriber_count() : 0;
+						$push_ready   = class_exists( 'Seyedcast_Push', false ) && Seyedcast_Push::library_ready();
+						?>
+						<p>
+							<?php
+							printf(
+								/* translators: %d: subscriber count */
+								esc_html__( 'تعداد مشترکان: %d', 'seyedcast' ),
+								(int) $push_count
+							);
+							?>
+						</p>
+						<?php if ( ! $push_ready ) : ?>
+							<p class="description" style="color:#b32d2e;">
+								<?php esc_html_e( 'کتابخانه web-push نصب نیست. در ریشه افزونه دستور composer install --no-dev را اجرا کنید.', 'seyedcast' ); ?>
+							</p>
+						<?php endif; ?>
+						<p>
+							<button type="button" class="button" id="seyedcast-push-test" <?php disabled( ! $push_ready || $push_count < 1 ); ?>>
+								<?php esc_html_e( 'ارسال نوتیف آزمایشی', 'seyedcast' ); ?>
+							</button>
+							<span id="seyedcast-push-test-status" class="description" style="margin-inline-start:0.5rem;"></span>
+						</p>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="seyedcast_pwa_name"><?php esc_html_e( 'نام اپلیکیشن', 'seyedcast' ); ?></label></th>
 					<td><input type="text" class="regular-text" id="seyedcast_pwa_name" name="seyedcast_settings[pwa_name]" value="<?php echo esc_attr( $settings['pwa_name'] ); ?>" /></td>
 				</tr>

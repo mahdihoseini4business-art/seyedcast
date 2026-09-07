@@ -63,6 +63,7 @@ class Seyedcast_Settings {
 			'pwa_bg_color'      => '#121212',
 			'pwa_icon_192'      => 0,
 			'pwa_icon_512'      => 0,
+			'push_enabled'      => 0,
 		);
 	}
 
@@ -241,6 +242,7 @@ class Seyedcast_Settings {
 
 		$out['pwa_enabled']    = (int) $existing['pwa_enabled'];
 		$out['pwa_prompt']     = (int) $existing['pwa_prompt'];
+		$out['push_enabled']   = isset( $existing['push_enabled'] ) ? (int) $existing['push_enabled'] : 0;
 		$out['pwa_name']       = isset( $input['pwa_name'] ) ? sanitize_text_field( $input['pwa_name'] ) : $existing['pwa_name'];
 		$out['pwa_short_name'] = isset( $input['pwa_short_name'] ) ? sanitize_text_field( $input['pwa_short_name'] ) : $existing['pwa_short_name'];
 		$out['pwa_theme_color'] = $existing['pwa_theme_color'];
@@ -261,8 +263,12 @@ class Seyedcast_Settings {
 		$out['pwa_icon_512'] = isset( $input['pwa_icon_512'] ) ? absint( $input['pwa_icon_512'] ) : (int) $existing['pwa_icon_512'];
 
 		if ( 'pwa' === $active_tab ) {
-			$out['pwa_enabled'] = ! empty( $input['pwa_enabled'] ) ? 1 : 0;
-			$out['pwa_prompt']  = ! empty( $input['pwa_prompt'] ) ? 1 : 0;
+			$out['pwa_enabled']  = ! empty( $input['pwa_enabled'] ) ? 1 : 0;
+			$out['pwa_prompt']   = ! empty( $input['pwa_prompt'] ) ? 1 : 0;
+			$out['push_enabled'] = ! empty( $input['push_enabled'] ) ? 1 : 0;
+			if ( $out['push_enabled'] && class_exists( 'Seyedcast_Push', false ) ) {
+				Seyedcast_Push::ensure_vapid_keys();
+			}
 		}
 
 		if ( 'page' === $active_tab ) {
@@ -372,6 +378,18 @@ class Seyedcast_Settings {
 		wp_enqueue_script( 'wp-color-picker' );
 		wp_enqueue_style( 'seyedcast-admin', SEYEDCAST_URL . 'admin/css/admin.css', array(), SEYEDCAST_VERSION );
 		wp_enqueue_script( 'seyedcast-admin', SEYEDCAST_URL . 'admin/js/admin.js', array( 'jquery', 'wp-color-picker' ), SEYEDCAST_VERSION, true );
+		wp_localize_script(
+			'seyedcast-admin',
+			'seyedcastAdmin',
+			array(
+				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+				'pushNonce' => wp_create_nonce( 'seyedcast_push_test' ),
+				'i18n'      => array(
+					'pushSending' => __( 'در حال ارسال…', 'seyedcast' ),
+					'pushError'   => __( 'ارسال اعلان آزمایشی ناموفق بود.', 'seyedcast' ),
+				),
+			)
+		);
 	}
 
 	/**
