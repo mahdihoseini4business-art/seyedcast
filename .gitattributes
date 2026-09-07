@@ -1,0 +1,9 @@
+# Keep installable `git archive` packages free of non-plugin paths.
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.github/ export-ignore
+/tests/ export-ignore
+/docs/ export-ignore
+/phpunit.xml export-ignore
+/phpunit.xml.dist export-ignore
+/composer.phar export-ignore
