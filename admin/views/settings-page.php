@@ -350,6 +350,11 @@ while ( count( $events ) < 3 ) {
 						<p class="description">
 							<?php esc_html_e( 'نیاز به HTTPS و فعال بودن PWA دارد. در iOS فقط پس از افزودن به صفحه اصلی (نسخه ۱۶.۴+) کار می‌کند.', 'seyedcast' ); ?>
 						</p>
+						<?php if ( ! empty( $settings['pwa_prompt'] ) && ! empty( $settings['push_enabled'] ) ) : ?>
+							<p class="description" style="color:#996800;">
+								<?php esc_html_e( 'توجه: پیشنهاد نصب و پرامپت پوش هر دو روشن‌اند. در فرانت پشت‌سرهم (نه هم‌زمان) نمایش داده می‌شوند تا تداخل نداشته باشند.', 'seyedcast' ); ?>
+							</p>
+						<?php endif; ?>
 						<?php
 						$push_count   = class_exists( 'Seyedcast_Push', false ) ? Seyedcast_Push::subscriber_count() : 0;
 						$push_ready   = class_exists( 'Seyedcast_Push', false ) && Seyedcast_Push::library_ready();

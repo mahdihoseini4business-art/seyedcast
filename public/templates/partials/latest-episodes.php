@@ -26,18 +26,20 @@ if ( ! $episodes ) {
 			$json    = esc_attr( wp_json_encode( $payload ) );
 			?>
 			<article class="seyedcast-latest-card">
-				<a class="seyedcast-latest-card__art" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
-					<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="<?php echo esc_attr( $payload['title'] ); ?>" loading="lazy" />
-				</a>
+				<div class="seyedcast-latest-card__media">
+					<a class="seyedcast-latest-card__art" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
+						<img src="<?php echo esc_url( $payload['cover'] ); ?>" alt="<?php echo esc_attr( $payload['title'] ); ?>" loading="lazy" />
+					</a>
+					<?php if ( ! empty( $payload['audio'] ) ) : ?>
+						<button type="button" class="seyedcast-play-btn seyedcast-latest-card__play" data-seyedcast-play="<?php echo $json; ?>" aria-label="<?php esc_attr_e( 'پخش', 'seyedcast' ); ?>">
+							<span></span>
+						</button>
+					<?php endif; ?>
+				</div>
 				<a class="seyedcast-latest-card__title" href="<?php echo esc_url( $payload['permalink'] ); ?>" data-seyedcast-nav>
 					<?php echo esc_html( $payload['title'] ); ?>
 				</a>
 				<span class="seyedcast-latest-card__show"><?php echo esc_html( $payload['show'] ); ?></span>
-				<?php if ( ! empty( $payload['audio'] ) ) : ?>
-					<button type="button" class="seyedcast-play-btn seyedcast-latest-card__play" data-seyedcast-play="<?php echo $json; ?>" aria-label="<?php esc_attr_e( 'پخش', 'seyedcast' ); ?>">
-						<span></span>
-					</button>
-				<?php endif; ?>
 			</article>
 		<?php endforeach; ?>
 	</div>

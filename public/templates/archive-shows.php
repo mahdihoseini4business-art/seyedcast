@@ -15,7 +15,7 @@ ob_start();
 	<section class="seyedcast-section">
 		<div class="seyedcast-section-head">
 			<h2><?php esc_html_e( 'همه پادکست‌ها', 'seyedcast' ); ?></h2>
-			<span class="seyedcast-section-head__hint"><?php esc_html_e( 'برای شروع روی کاور بزنید', 'seyedcast' ); ?></span>
+			<span class="seyedcast-section-head__hint"><?php esc_html_e( 'برای مشاهده جزئیات روی کاور بزنید', 'seyedcast' ); ?></span>
 		</div>
 		<div class="seyedcast-shows-grid">
 			<?php if ( have_posts() ) : ?>
@@ -28,7 +28,7 @@ ob_start();
 					<a class="seyedcast-show-tile" href="<?php the_permalink(); ?>" data-seyedcast-nav>
 						<span class="seyedcast-show-tile__art">
 							<img src="<?php echo esc_url( $cover ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" width="300" height="300" loading="lazy" />
-							<span class="seyedcast-show-tile__play" aria-hidden="true"><span></span></span>
+							<span class="seyedcast-show-tile__open" aria-hidden="true"></span>
 						</span>
 						<span class="seyedcast-show-tile__title"><?php the_title(); ?></span>
 						<span class="seyedcast-show-tile__meta"><?php echo esc_html( sprintf( _n( '%s اپیزود', '%s اپیزود', $count, 'seyedcast' ), number_format_i18n( $count ) ) ); ?></span>
@@ -60,7 +60,6 @@ ob_start();
 	</section>
 
 	<?php Seyedcast_Templates::partial( 'latest-episodes' ); ?>
-	<?php Seyedcast_Templates::partial( 'continue-listening' ); ?>
 
 	<?php Seyedcast_Templates::partial( 'suggested-for-you' ); ?>
 

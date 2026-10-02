@@ -16,7 +16,7 @@
 		var seenKey = cfg.seenKey || 'seyedcast_last_seen_episode';
 		var deferredPrompt = null;
 		var toastVisible = false;
-		var mode = 'install'; // install | update
+		var mode = 'install'; // install | hint | update
 		var latestItem = null;
 
 		var titleEl = root.querySelector('.seyedcast-pwa-prompt__title');
@@ -25,6 +25,18 @@
 		var installBtn = root.querySelector('[data-action="install"]');
 		var dismissBtn = root.querySelector('[data-action="dismiss-secondary"]');
 		var closeBtn = root.querySelector('.seyedcast-pwa-prompt__close');
+
+		function emitPromptState(open) {
+			try {
+				document.dispatchEvent(
+					new CustomEvent('seyedcast:bottom-prompt', {
+						detail: { source: 'pwa', open: !!open }
+					})
+				);
+			} catch (e) {
+				/* ignore */
+			}
+		}
 
 		function isStandalone() {
 			return (
@@ -40,7 +52,6 @@
 			if (/iPad|iPhone|iPod/.test(ua)) {
 				return true;
 			}
-			// iPadOS 13+ desktop UA
 			return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
 		}
 
@@ -106,7 +117,8 @@
 		function hideToast() {
 			root.hidden = true;
 			toastVisible = false;
-			root.classList.remove('is-update');
+			root.classList.remove('is-update', 'is-hint');
+			emitPromptState(false);
 		}
 
 		function setIcon(url, alt) {
@@ -133,21 +145,30 @@
 			if (hardDismissed() || isSnoozed() || isStandalone() || !isMobile()) {
 				return;
 			}
-			mode = 'install';
+			if (mode !== 'hint') {
+				mode = 'install';
+				root.classList.remove('is-hint');
+			}
 			root.classList.remove('is-update');
 			if (titleEl) {
 				titleEl.textContent = (cfg.i18n && cfg.i18n.title) || 'نصب روی موبایل';
 			}
 			if (installBtn) {
 				installBtn.hidden = false;
-				installBtn.textContent = (cfg.i18n && cfg.i18n.install) || 'افزودن به صفحه اصلی';
+				if (mode === 'hint') {
+					installBtn.textContent = (cfg.i18n && cfg.i18n.gotIt) || 'متوجه شدم';
+				} else {
+					installBtn.textContent = (cfg.i18n && cfg.i18n.install) || 'افزودن به صفحه اصلی';
+				}
 			}
 			if (dismissBtn) {
 				dismissBtn.hidden = false;
 				dismissBtn.textContent = (cfg.i18n && cfg.i18n.later) || 'بعداً';
 			}
 			if (closeBtn) {
-				closeBtn.setAttribute('aria-label', (cfg.i18n && cfg.i18n.close) || 'بستن');
+				var forever = (cfg.i18n && cfg.i18n.close) || 'دیگر نشان نده';
+				closeBtn.setAttribute('aria-label', forever);
+				closeBtn.setAttribute('title', forever);
 			}
 			setIcon(cfg.iconUrl, (cfg.i18n && cfg.i18n.title) || '');
 			if (msgEl) {
@@ -155,6 +176,7 @@
 			}
 			root.hidden = false;
 			toastVisible = true;
+			emitPromptState(true);
 		}
 
 		function showUpdateToast(item) {
@@ -164,6 +186,7 @@
 			mode = 'update';
 			latestItem = item;
 			root.classList.add('is-update');
+			root.classList.remove('is-hint');
 			if (titleEl) {
 				titleEl.textContent = (cfg.i18n && cfg.i18n.updateTitle) || 'پادکست جدید اومد';
 			}
@@ -181,10 +204,12 @@
 			}
 			if (closeBtn) {
 				closeBtn.setAttribute('aria-label', (cfg.i18n && cfg.i18n.close) || 'بستن');
+				closeBtn.removeAttribute('title');
 			}
 			setIcon(item.cover || cfg.iconUrl, item.title || '');
 			root.hidden = false;
 			toastVisible = true;
+			emitPromptState(true);
 		}
 
 		function showPlatformHint() {
@@ -198,9 +223,12 @@
 					(cfg.i18n && cfg.i18n.genericHint) ||
 					'از منوی مرورگر گزینه «Add to Home Screen» یا «نصب برنامه» را انتخاب کنید.';
 			}
-			if (hint) {
-				showInstallToast(hint);
+			if (!hint) {
+				return;
 			}
+			mode = 'hint';
+			root.classList.add('is-hint');
+			showInstallToast(hint);
 		}
 
 		function scheduleInstallToast() {
@@ -252,12 +280,10 @@
 					var seenPublished = parseInt(storageGet(seenKey + '_ts') || '0', 10);
 
 					if (!seenId) {
-						// First open after install: seed without toasting existing content.
 						markSeen(id, published);
 						return;
 					}
 
-					// Already viewing this latest episode.
 					if (String(cfg.currentEpisodeId || '') === id) {
 						markSeen(id, published);
 						return;
@@ -317,7 +343,6 @@
 			hideToast();
 		}
 
-		// Register SW whenever PWA is enabled (not only when install prompt is on).
 		if ('serviceWorker' in navigator && cfg.swUrl) {
 			var swOpts = cfg.swScope ? { scope: cfg.swScope } : undefined;
 			navigator.serviceWorker.register(cfg.swUrl, swOpts).catch(function () {
@@ -329,6 +354,10 @@
 			installBtn.addEventListener('click', function () {
 				if (mode === 'update') {
 					openLatest();
+					return;
+				}
+				if (mode === 'hint') {
+					snooze(cfg.snoozeDays || 3);
 					return;
 				}
 				if (deferredPrompt) {

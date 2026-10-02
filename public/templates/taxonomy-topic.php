@@ -37,7 +37,7 @@ ob_start();
 						<a class="seyedcast-show-tile" href="<?php the_permalink(); ?>" data-seyedcast-nav>
 							<span class="seyedcast-show-tile__art">
 								<img src="<?php echo esc_url( $cover ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" width="300" height="300" loading="lazy" />
-								<span class="seyedcast-show-tile__play" aria-hidden="true"><span></span></span>
+								<span class="seyedcast-show-tile__open" aria-hidden="true"></span>
 							</span>
 							<span class="seyedcast-show-tile__title"><?php the_title(); ?></span>
 							<span class="seyedcast-show-tile__meta"><?php echo esc_html( sprintf( _n( '%s اپیزود', '%s اپیزود', $count, 'seyedcast' ), number_format_i18n( $count ) ) ); ?></span>
