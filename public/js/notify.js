@@ -1,5 +1,5 @@
 /**
- * Notify-me modal: open/close + AJAX submit.
+ * Notify-me modal: open/close + AJAX submit + focus trap.
  */
 (function () {
 	'use strict';
@@ -8,6 +8,8 @@
 	var ajaxUrl = cfg.ajaxUrl || '';
 	var action = cfg.action || 'seyedcast_notify_lead';
 	var nonce = cfg.nonce || '';
+	var lastTrigger = null;
+	var activeModal = null;
 
 	function t(key, fallback) {
 		return (cfg.i18n && cfg.i18n[key]) || fallback;
@@ -24,19 +26,58 @@
 		msg.classList.toggle('is-ok', !!text && !isError);
 	}
 
-	function openModal(root) {
+	function focusable(modal) {
+		var card = modal.querySelector('.seyedcast-notify-modal__card') || modal;
+		return Array.prototype.slice.call(
+			card.querySelectorAll(
+				'a[href], button:not([disabled]), textarea, input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+			)
+		).filter(function (el) {
+			return el.offsetParent !== null || el === document.activeElement;
+		});
+	}
+
+	function trapFocus(e) {
+		if (!activeModal || e.key !== 'Tab') {
+			return;
+		}
+		var nodes = focusable(activeModal);
+		if (!nodes.length) {
+			e.preventDefault();
+			return;
+		}
+		var first = nodes[0];
+		var last = nodes[nodes.length - 1];
+		if (e.shiftKey && document.activeElement === first) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && document.activeElement === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
+	function openModal(root, trigger) {
 		var modal = root.querySelector('[data-seyedcast-notify-modal]');
 		if (!modal) {
 			return;
 		}
+		lastTrigger = trigger || document.activeElement;
+		activeModal = modal;
 		modal.hidden = false;
 		document.body.classList.add('seyedcast-notify-open');
+		document.addEventListener('keydown', trapFocus, true);
 		var input = modal.querySelector('input[name="name"]');
-		if (input) {
-			window.setTimeout(function () {
+		window.setTimeout(function () {
+			if (input) {
 				input.focus();
-			}, 30);
-		}
+			} else {
+				var nodes = focusable(modal);
+				if (nodes[0]) {
+					nodes[0].focus();
+				}
+			}
+		}, 30);
 	}
 
 	function closeModal(root) {
@@ -45,12 +86,20 @@
 			return;
 		}
 		modal.hidden = true;
+		if (activeModal === modal) {
+			activeModal = null;
+			document.removeEventListener('keydown', trapFocus, true);
+		}
 		if (!document.querySelector('[data-seyedcast-notify-modal]:not([hidden])')) {
 			document.body.classList.remove('seyedcast-notify-open');
 		}
 		var form = root.querySelector('[data-seyedcast-notify-form]');
 		if (form) {
 			setMsg(form, '', false);
+		}
+		if (lastTrigger && typeof lastTrigger.focus === 'function') {
+			lastTrigger.focus();
+			lastTrigger = null;
 		}
 	}
 
@@ -68,10 +117,16 @@
 
 		if (name.length < 2) {
 			setMsg(form, t('nameRequired', 'نام را وارد کنید.'), true);
+			if (nameInput) {
+				nameInput.focus();
+			}
 			return;
 		}
 		if (!phone) {
 			setMsg(form, t('phoneRequired', 'شماره موبایل را وارد کنید.'), true);
+			if (phoneInput) {
+				phoneInput.focus();
+			}
 			return;
 		}
 
@@ -132,9 +187,10 @@
 		root._seyedcastNotifyBound = true;
 
 		root.addEventListener('click', function (e) {
-			if (e.target.closest('[data-seyedcast-notify-open]')) {
+			var openBtn = e.target.closest('[data-seyedcast-notify-open]');
+			if (openBtn) {
 				e.preventDefault();
-				openModal(root);
+				openModal(root, openBtn);
 				return;
 			}
 			if (e.target.closest('[data-seyedcast-notify-close]')) {

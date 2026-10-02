@@ -166,7 +166,8 @@ class Seyedcast_Pwa {
 					'message'        => __( 'برای دسترسی سریع‌تر، پادکست را به صفحه اصلی گوشی اضافه کنید.', 'seyedcast' ),
 					'install'        => __( 'افزودن به صفحه اصلی', 'seyedcast' ),
 					'later'          => __( 'بعداً', 'seyedcast' ),
-					'close'          => __( 'بستن', 'seyedcast' ),
+					'close'          => __( 'دیگر نشان نده', 'seyedcast' ),
+					'gotIt'          => __( 'متوجه شدم', 'seyedcast' ),
 					'iosHint'        => __( 'در Safari دکمه Share (مربع با فلش) را بزنید، سپس «Add to Home Screen» را انتخاب کنید.', 'seyedcast' ),
 					'androidHint'    => __( 'منوی مرورگر (⋮) را باز کنید و «نصب برنامه» یا «افزودن به صفحه اصلی» را بزنید.', 'seyedcast' ),
 					'genericHint'    => __( 'از منوی مرورگر گزینه «Add to Home Screen» یا «نصب برنامه» را انتخاب کنید.', 'seyedcast' ),
@@ -443,15 +444,23 @@ class Seyedcast_Pwa {
 		echo "  event.notification.close();\n";
 		echo "  var target = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';\n";
 		echo "  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {\n";
+		echo "    var targetUrl;\n";
+		echo "    try { targetUrl = new URL(target, self.location.origin); } catch (e) { targetUrl = null; }\n";
 		echo "    for (var i = 0; i < clientList.length; i++) {\n";
 		echo "      var client = clientList[i];\n";
-		echo "      if (client.url && 'focus' in client) {\n";
-		echo "        client.navigate(target);\n";
-		echo "        return client.focus();\n";
+		echo "      if (!client || !('focus' in client)) continue;\n";
+		echo "      var sameOrigin = true;\n";
+		echo "      if (targetUrl && client.url) {\n";
+		echo "        try { sameOrigin = (new URL(client.url).origin === targetUrl.origin); } catch (e2) { sameOrigin = false; }\n";
 		echo "      }\n";
+		echo "      if (!sameOrigin) continue;\n";
+		echo "      if ('navigate' in client && targetUrl) {\n";
+		echo "        try { client.navigate(targetUrl.href); } catch (e3) {}\n";
+		echo "      }\n";
+		echo "      return client.focus();\n";
 		echo "    }\n";
 		echo "    if (clients.openWindow) {\n";
-		echo "      return clients.openWindow(target);\n";
+		echo "      return clients.openWindow(targetUrl ? targetUrl.href : target);\n";
 		echo "    }\n";
 		echo "  }));\n";
 		echo "});\n";

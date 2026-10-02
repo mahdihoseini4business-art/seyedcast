@@ -139,7 +139,7 @@ ob_start();
 								<?php endif; ?>
 								<span class="seyedcast-episode-row__progress-label" data-role="progress-label"></span>
 							</div>
-							<div class="seyedcast-episode-row__progress" data-role="progress" hidden aria-hidden="true">
+							<div class="seyedcast-episode-row__progress" data-role="progress" hidden role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
 								<span class="seyedcast-episode-row__progress-bar" data-role="progress-bar"></span>
 							</div>
 						</div>
@@ -156,6 +156,16 @@ ob_start();
 				</div>
 				<h3 class="seyedcast-empty-state__title"><?php esc_html_e( 'هنوز اپیزودی نیست', 'seyedcast' ); ?></h3>
 				<p class="seyedcast-empty-state__text"><?php esc_html_e( 'به محض انتشار اپیزود جدید، اینجا نمایش داده می‌شود. می‌توانید برای خبر شدن ثبت‌نام کنید.', 'seyedcast' ); ?></p>
+				<?php
+				if ( $notify_on ) {
+					Seyedcast_Templates::partial(
+						'notify-cta',
+						array(
+							'seyedcast_notify_show_id' => $show_id,
+						)
+					);
+				}
+				?>
 			</div>
 		<?php endif; ?>
 	</section>

@@ -8,13 +8,18 @@
 	}
 
 	var storageKey = cfg.storageKey || 'seyedcast_push_prompt_dismissed';
+	var snoozeKey = cfg.snoozeKey || 'seyedcast_push_prompt_snooze';
 	var subscribedKey = cfg.subscribedKey || 'seyedcast_push_subscribed';
+	var snoozeDays = cfg.snoozeDays || 3;
 	var titleEl = root.querySelector('.seyedcast-pwa-prompt__title');
 	var msgEl = root.querySelector('.seyedcast-pwa-prompt__message');
 	var iconEl = root.querySelector('.seyedcast-pwa-prompt__icon');
 	var enableBtn = root.querySelector('[data-action="enable"]');
 	var dismissBtn = root.querySelector('[data-action="dismiss-secondary"]');
 	var closeBtn = root.querySelector('.seyedcast-pwa-prompt__close');
+	var otherPromptOpen = false;
+	var pendingShow = false;
+	var shownOnce = false;
 
 	function lsGet(key) {
 		try {
@@ -32,17 +37,50 @@
 		}
 	}
 
-	function dismissed() {
+	function lsRemove(key) {
+		try {
+			localStorage.removeItem(key);
+		} catch (e) {
+			/* ignore */
+		}
+	}
+
+	function hardDismissed() {
 		return lsGet(storageKey) === '1';
+	}
+
+	function isSnoozed() {
+		var until = parseInt(lsGet(snoozeKey) || '0', 10);
+		return until > Date.now();
 	}
 
 	function alreadySubscribed() {
 		return lsGet(subscribedKey) === '1';
 	}
 
-	function dismiss() {
-		lsSet(storageKey, '1');
+	function hidePrompt() {
 		root.hidden = true;
+		try {
+			document.dispatchEvent(
+				new CustomEvent('seyedcast:bottom-prompt', {
+					detail: { source: 'push', open: false }
+				})
+			);
+		} catch (e) {
+			/* ignore */
+		}
+	}
+
+	function snooze(days) {
+		var ms = (days || snoozeDays) * 24 * 60 * 60 * 1000;
+		lsSet(snoozeKey, String(Date.now() + ms));
+		hidePrompt();
+	}
+
+	function hardDismiss() {
+		lsSet(storageKey, '1');
+		lsRemove(snoozeKey);
+		hidePrompt();
 	}
 
 	function urlBase64ToUint8Array(base64String) {
@@ -70,7 +108,9 @@
 			dismissBtn.textContent = (cfg.i18n && cfg.i18n.later) || 'Later';
 		}
 		if (closeBtn) {
-			closeBtn.setAttribute('aria-label', (cfg.i18n && cfg.i18n.close) || 'Close');
+			var forever = (cfg.i18n && cfg.i18n.close) || 'دیگر نشان نده';
+			closeBtn.setAttribute('aria-label', forever);
+			closeBtn.setAttribute('title', forever);
 		}
 		if (iconEl && cfg.iconUrl) {
 			iconEl.src = cfg.iconUrl;
@@ -80,24 +120,60 @@
 		}
 	}
 
+	function pwaPromptVisible() {
+		var pwa = document.getElementById('seyedcast-pwa-prompt');
+		return !!(pwa && !pwa.hidden);
+	}
+
+	function revealPrompt(messageOverride) {
+		bindLabels(messageOverride);
+		root.hidden = false;
+		shownOnce = true;
+		try {
+			document.dispatchEvent(
+				new CustomEvent('seyedcast:bottom-prompt', {
+					detail: { source: 'push', open: true }
+				})
+			);
+		} catch (e) {
+			/* ignore */
+		}
+	}
+
 	function showPrompt(messageOverride) {
-		if (dismissed() || alreadySubscribed()) {
+		if (hardDismissed() || isSnoozed() || alreadySubscribed() || shownOnce) {
 			return;
 		}
 		if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
 			return;
 		}
+		if (otherPromptOpen || pwaPromptVisible()) {
+			pendingShow = true;
+			return;
+		}
 		if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
 			ensureSubscription().then(function (ok) {
-				if (!ok) {
-					bindLabels(messageOverride);
-					root.hidden = false;
+				if (!ok && !hardDismissed() && !isSnoozed() && !alreadySubscribed()) {
+					if (otherPromptOpen || pwaPromptVisible()) {
+						pendingShow = true;
+						return;
+					}
+					revealPrompt(messageOverride);
 				}
 			});
 			return;
 		}
-		bindLabels(messageOverride);
-		root.hidden = false;
+		revealPrompt(messageOverride);
+	}
+
+	function flushPending() {
+		if (!pendingShow || otherPromptOpen || pwaPromptVisible()) {
+			return;
+		}
+		pendingShow = false;
+		window.setTimeout(function () {
+			showPrompt();
+		}, 600);
 	}
 
 	function postSubscription(subscription) {
@@ -126,6 +202,7 @@
 					return postSubscription(existing).then(function (ok) {
 						if (ok) {
 							lsSet(subscribedKey, '1');
+							lsRemove(snoozeKey);
 						}
 						return ok;
 					});
@@ -137,6 +214,7 @@
 					return postSubscription(sub).then(function (ok) {
 						if (ok) {
 							lsSet(subscribedKey, '1');
+							lsRemove(snoozeKey);
 						}
 						return ok;
 					});
@@ -166,22 +244,38 @@
 			if (permission !== 'granted') {
 				bindLabels((cfg.i18n && cfg.i18n.denied) || '');
 				enableBtn.disabled = false;
-				lsSet(storageKey, '1');
+				hardDismiss();
 				return;
 			}
 			return ensureSubscription().then(function (ok) {
 				enableBtn.disabled = false;
 				if (ok) {
 					bindLabels((cfg.i18n && cfg.i18n.success) || '');
-					window.setTimeout(dismiss, 1200);
+					window.setTimeout(hardDismiss, 1200);
 				} else {
-					enableBtn.disabled = false;
+					bindLabels((cfg.i18n && cfg.i18n.failed) || '');
+					root.hidden = false;
 				}
 			});
 		});
 	}
 
-	if (alreadySubscribed() || dismissed()) {
+	document.addEventListener('seyedcast:bottom-prompt', function (e) {
+		var detail = e && e.detail ? e.detail : {};
+		if (detail.source === 'push') {
+			return;
+		}
+		otherPromptOpen = !!detail.open;
+		if (!otherPromptOpen) {
+			flushPending();
+		} else if (!root.hidden) {
+			hidePrompt();
+			pendingShow = true;
+			shownOnce = false;
+		}
+	});
+
+	if (alreadySubscribed() || hardDismissed() || isSnoozed()) {
 		if (alreadySubscribed() || (typeof Notification !== 'undefined' && Notification.permission === 'granted')) {
 			navigator.serviceWorker.register(cfg.swUrl).then(function () {
 				return ensureSubscription();
@@ -192,16 +286,23 @@
 		return;
 	}
 
+	if (pwaPromptVisible()) {
+		otherPromptOpen = true;
+	}
+
 	window.setTimeout(function () {
 		showPrompt();
-	}, cfg.delayMs || 3500);
+	}, cfg.delayMs || 8000);
 
 	if (enableBtn) {
 		enableBtn.addEventListener('click', enable);
 	}
-	[dismissBtn, closeBtn].forEach(function (btn) {
-		if (btn) {
-			btn.addEventListener('click', dismiss);
-		}
-	});
+	if (dismissBtn) {
+		dismissBtn.addEventListener('click', function () {
+			snooze(snoozeDays);
+		});
+	}
+	if (closeBtn) {
+		closeBtn.addEventListener('click', hardDismiss);
+	}
 })();

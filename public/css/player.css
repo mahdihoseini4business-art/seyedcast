@@ -382,6 +382,10 @@ body.seyedcast-preset-soundcloud .seyedcast-btn--play {
 	z-index: 100001;
 }
 
+.seyedcast-push-prompt.is-waiting {
+	visibility: hidden;
+}
+
 .seyedcast-push-prompt .seyedcast-pwa-prompt__card {
 	animation-delay: 0.05s;
 }

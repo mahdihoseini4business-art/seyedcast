@@ -298,6 +298,8 @@
 			var pct = entry && entry.pct ? parseInt(entry.pct, 10) : 0;
 			if (pct < 2) {
 				wrap.hidden = true;
+				wrap.setAttribute('aria-valuenow', '0');
+				wrap.removeAttribute('aria-label');
 				row.classList.remove('is-progress', 'is-finished');
 				if (label) {
 					label.hidden = true;
@@ -309,12 +311,16 @@
 			row.classList.add('is-progress');
 			var done = pct >= 97;
 			row.classList.toggle('is-finished', done);
-			bar.style.width = (done ? 100 : pct) + '%';
+			var shown = done ? 100 : pct;
+			bar.style.width = shown + '%';
+			wrap.setAttribute('aria-valuenow', String(shown));
+			var statusText = done
+				? (cfg.i18n && cfg.i18n.progressDone) || 'گوش داده‌اید'
+				: pct + '%';
+			wrap.setAttribute('aria-label', statusText);
 			if (label) {
 				label.hidden = false;
-				label.textContent = done
-					? (cfg.i18n && cfg.i18n.progressDone) || 'گوش داده‌اید'
-					: pct + '%';
+				label.textContent = statusText;
 			}
 		});
 	}
@@ -667,6 +673,10 @@
 		function schedule() {
 			if (sliderTimer) {
 				clearInterval(sliderTimer);
+				sliderTimer = null;
+			}
+			if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+				return;
 			}
 			sliderTimer = setInterval(function () {
 				show(index + 1);
@@ -743,7 +753,7 @@
 					'" alt="' +
 					escapeAttr(item.title || '') +
 					'" width="300" height="300" loading="lazy" />' +
-					'<span class="seyedcast-show-tile__play" aria-hidden="true"><span></span></span>' +
+					'<span class="seyedcast-show-tile__open" aria-hidden="true"></span>' +
 					'</span>' +
 					'<span class="seyedcast-show-tile__title">' +
 					escapeHtml(item.title) +

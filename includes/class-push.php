@@ -18,6 +18,7 @@ class Seyedcast_Push {
 	const TABLE_OPTION    = 'seyedcast_push_db_version';
 	const VAPID_OPTION    = 'seyedcast_vapid_keys';
 	const SENT_META       = '_seyedcast_push_sent';
+	const SCHEDULED_META  = '_seyedcast_push_scheduled';
 	const CRON_HOOK       = 'seyedcast_send_episode_push';
 	const BATCH_SIZE      = 50;
 
@@ -37,6 +38,7 @@ class Seyedcast_Push {
 		add_action( 'transition_post_status', array( $this, 'on_episode_status' ), 10, 3 );
 		add_action( self::CRON_HOOK, array( $this, 'cron_send_episode' ), 10, 2 );
 
+		add_action( 'admin_init', array( $this, 'maybe_reschedule_pending' ) );
 		add_action( 'admin_notices', array( $this, 'admin_library_notice' ) );
 		add_action( 'wp_ajax_seyedcast_push_test', array( $this, 'ajax_test_send' ) );
 	}
@@ -312,17 +314,20 @@ class Seyedcast_Push {
 				'swUrl'         => home_url( '/seyedcast-sw.js' ),
 				'vapidPublic'   => $keys['publicKey'],
 				'storageKey'    => 'seyedcast_push_prompt_dismissed',
+				'snoozeKey'     => 'seyedcast_push_prompt_snooze',
 				'subscribedKey' => 'seyedcast_push_subscribed',
+				'snoozeDays'    => 3,
 				'iconUrl'       => $this->icon_url(),
-				'delayMs'       => 3500,
+				'delayMs'       => 8000,
 				'i18n'          => array(
 					'title'   => __( 'اعلان اپیزودهای جدید', 'seyedcast' ),
 					'message' => __( 'با فعال‌سازی اعلان‌ها، هر وقت اپیزود جدیدی منتشر شود خبردار می‌شوید.', 'seyedcast' ),
 					'enable'  => __( 'فعال کردن اعلان‌ها', 'seyedcast' ),
 					'later'   => __( 'بعداً', 'seyedcast' ),
-					'close'   => __( 'بستن', 'seyedcast' ),
+					'close'   => __( 'دیگر نشان نده', 'seyedcast' ),
 					'success' => __( 'اعلان‌ها فعال شد.', 'seyedcast' ),
 					'denied'  => __( 'اجازه اعلان داده نشد. از تنظیمات مرورگر می‌توانید فعال کنید.', 'seyedcast' ),
+					'failed'  => __( 'فعال‌سازی اعلان‌ها انجام نشد. دوباره تلاش کنید.', 'seyedcast' ),
 				),
 				'appName'       => ! empty( $settings['pwa_name'] ) ? $settings['pwa_name'] : 'Seyedcast',
 			)
@@ -505,6 +510,51 @@ class Seyedcast_Push {
 	}
 
 	/**
+	 * Re-queue episode pushes that were scheduled but never marked sent
+	 * (e.g. lost WP-Cron event). Throttled for admins only.
+	 */
+	public function maybe_reschedule_pending() {
+		if ( ! current_user_can( 'manage_options' ) || ! self::enabled() || ! self::library_ready() ) {
+			return;
+		}
+		if ( get_transient( 'seyedcast_push_reschedule_checked' ) ) {
+			return;
+		}
+		set_transient( 'seyedcast_push_reschedule_checked', 1, 15 * MINUTE_IN_SECONDS );
+
+		$query = new WP_Query(
+			array(
+				'post_type'              => 'seyedcast_episode',
+				'post_status'            => 'publish',
+				'posts_per_page'         => 20,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'relation' => 'AND',
+					array(
+						'key'     => self::SCHEDULED_META,
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => self::SENT_META,
+						'compare' => 'NOT EXISTS',
+					),
+				),
+			)
+		);
+
+		if ( empty( $query->posts ) ) {
+			return;
+		}
+
+		foreach ( $query->posts as $episode_id ) {
+			$this->schedule_episode_push( (int) $episode_id, 0, 10 );
+		}
+	}
+
+	/**
 	 * Schedule push when episode is first published.
 	 *
 	 * @param string  $new_status New status.
@@ -528,11 +578,30 @@ class Seyedcast_Push {
 			return;
 		}
 
-		update_post_meta( $post->ID, self::SENT_META, time() );
+		$this->schedule_episode_push( (int) $post->ID, 0, 5 );
+	}
 
-		if ( ! wp_next_scheduled( self::CRON_HOOK, array( (int) $post->ID, 0 ) ) ) {
-			wp_schedule_single_event( time() + 5, self::CRON_HOOK, array( (int) $post->ID, 0 ) );
+	/**
+	 * Queue a single-event cron for episode push (idempotent).
+	 *
+	 * @param int $episode_id Episode ID.
+	 * @param int $offset     Batch offset.
+	 * @param int $delay      Delay in seconds.
+	 */
+	private function schedule_episode_push( $episode_id, $offset = 0, $delay = 5 ) {
+		$episode_id = (int) $episode_id;
+		$offset     = (int) $offset;
+		$args       = array( $episode_id, $offset );
+
+		if ( wp_next_scheduled( self::CRON_HOOK, $args ) ) {
+			return;
 		}
+
+		if ( 0 === $offset ) {
+			update_post_meta( $episode_id, self::SCHEDULED_META, time() );
+		}
+
+		wp_schedule_single_event( time() + max( 1, (int) $delay ), self::CRON_HOOK, $args );
 	}
 
 	/**
@@ -549,16 +618,26 @@ class Seyedcast_Push {
 		if ( ! $post || 'seyedcast_episode' !== $post->post_type || 'publish' !== $post->post_status ) {
 			return;
 		}
+		if ( get_post_meta( $episode_id, self::SENT_META, true ) ) {
+			return;
+		}
 		if ( ! self::enabled() || ! self::library_ready() ) {
+			// Keep retryable: do not mark as sent when the feature/library is temporarily unavailable.
+			$this->schedule_episode_push( $episode_id, $offset, 300 );
 			return;
 		}
 
-		$payload = $this->build_payload( $post );
-		$sent    = $this->send_batch( $payload, $offset, self::BATCH_SIZE );
+		$payload   = $this->build_payload( $post );
+		$processed = $this->send_batch( $payload, $offset, self::BATCH_SIZE );
 
-		if ( $sent >= self::BATCH_SIZE ) {
-			wp_schedule_single_event( time() + 15, self::CRON_HOOK, array( $episode_id, $offset + self::BATCH_SIZE ) );
+		if ( $processed >= self::BATCH_SIZE ) {
+			$this->schedule_episode_push( $episode_id, $offset + self::BATCH_SIZE, 15 );
+			return;
 		}
+
+		// Finished all batches (including zero subscribers).
+		update_post_meta( $episode_id, self::SENT_META, time() );
+		delete_post_meta( $episode_id, self::SCHEDULED_META );
 	}
 
 	/**
