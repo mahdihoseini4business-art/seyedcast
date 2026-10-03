@@ -9,19 +9,11 @@ use Jose\Component\Core\JWT;
 use function array_key_exists;
 use function count;
 use function is_array;
-use function is_string;
-use function sprintf;
 
-/**
- * This class is a factory to create Header Checker Managers.
- *
- * It allows to add header parameter checkers and token type supports.
- * The factory is responsible to create a Header Checker Manager with the header parameter checkers found based
- */
 class HeaderCheckerManager
 {
     /**
-     * @var array<string, HeaderChecker>
+     * @var HeaderChecker[]
      */
     private array $checkers = [];
 
@@ -31,6 +23,8 @@ class HeaderCheckerManager
     private array $tokenTypes = [];
 
     /**
+     * HeaderCheckerManager constructor.
+     *
      * @param HeaderChecker[] $checkers
      * @param TokenTypeSupport[] $tokenTypes
      */
@@ -149,21 +143,17 @@ class HeaderCheckerManager
         $this->checkCriticalHeader($protected, $header, $checkedHeaderParameters);
     }
 
-    /**
-     * @param string[] $checkedHeaderParameters
-     */
     private function checkCriticalHeader(array $protected, array $header, array $checkedHeaderParameters): void
     {
         if (array_key_exists('crit', $protected)) {
-            $crit = $protected['crit'];
-            if (! is_array($crit) || $crit !== array_filter($crit, is_string(...))) {
+            if (! is_array($protected['crit'])) {
                 throw new InvalidHeaderException(
                     'The header "crit" must be a list of header parameters.',
                     'crit',
                     $protected['crit']
                 );
             }
-            $diff = array_diff($crit, $checkedHeaderParameters);
+            $diff = array_diff($protected['crit'], $checkedHeaderParameters);
             if (count($diff) !== 0) {
                 throw new InvalidHeaderException(sprintf(
                     'One or more header parameters are marked as critical, but they are missing or have not been checked: %s.',

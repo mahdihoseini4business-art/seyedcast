@@ -7,16 +7,14 @@ namespace Jose\Component\Core\Util;
 use Brick\Math\BigInteger as BrickBigInteger;
 use InvalidArgumentException;
 use function chr;
-use function is_string;
-use function strlen;
 
 /**
  * @internal
  */
-final readonly class BigInteger
+final class BigInteger
 {
     private function __construct(
-        private BrickBigInteger $value
+        private readonly BrickBigInteger $value
     ) {
     }
 
@@ -27,9 +25,6 @@ final readonly class BigInteger
             throw new InvalidArgumentException('Unable to convert the value');
         }
         $data = current($res);
-        if (! is_string($data) || $data === '') {
-            throw new InvalidArgumentException('Unable to convert the value');
-        }
 
         return new self(BrickBigInteger::fromBase($data, 16));
     }
@@ -54,7 +49,7 @@ final readonly class BigInteger
         }
 
         $temp = $this->value->toBase(16);
-        $temp = 0 !== (strlen($temp) & 1) ? '0' . $temp : $temp;
+        $temp = 0 !== (mb_strlen($temp, '8bit') & 1) ? '0' . $temp : $temp;
         $temp = hex2bin($temp);
         if ($temp === false) {
             throw new InvalidArgumentException('Unable to convert the value into bytes');

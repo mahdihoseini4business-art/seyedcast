@@ -18,8 +18,6 @@ use SpomkyLabs\Pki\CryptoTypes\Asymmetric\RSA\RSAPublicKey;
 use function array_key_exists;
 use function count;
 use function is_array;
-use function is_string;
-use function strlen;
 
 /**
  * @internal
@@ -32,11 +30,11 @@ final class RSAKey
 
     private BigInteger $modulus;
 
-    private int $modulusLength;
+    private int $modulus_length;
 
-    private BigInteger $publicExponent;
+    private BigInteger $public_exponent;
 
-    private ?BigInteger $privateExponent = null;
+    private ?BigInteger $private_exponent = null;
 
     /**
      * @var BigInteger[]
@@ -68,7 +66,7 @@ final class RSAKey
 
     public function getModulusLength(): int
     {
-        return $this->modulusLength;
+        return $this->modulus_length;
     }
 
     public function getExponent(): BigInteger
@@ -83,12 +81,12 @@ final class RSAKey
 
     public function getPublicExponent(): BigInteger
     {
-        return $this->publicExponent;
+        return $this->public_exponent;
     }
 
     public function getPrivateExponent(): ?BigInteger
     {
-        return $this->privateExponent;
+        return $this->private_exponent;
     }
 
     /**
@@ -203,11 +201,11 @@ final class RSAKey
     private function populateBigIntegers(): void
     {
         $this->modulus = $this->convertBase64StringToBigInteger($this->values['n']);
-        $this->modulusLength = strlen($this->getModulus()->toBytes());
-        $this->publicExponent = $this->convertBase64StringToBigInteger($this->values['e']);
+        $this->modulus_length = mb_strlen($this->getModulus()->toBytes(), '8bit');
+        $this->public_exponent = $this->convertBase64StringToBigInteger($this->values['e']);
 
         if (! $this->isPublic()) {
-            $this->privateExponent = $this->convertBase64StringToBigInteger($this->values['d']);
+            $this->private_exponent = $this->convertBase64StringToBigInteger($this->values['d']);
 
             if (array_key_exists('p', $this->values) && array_key_exists('q', $this->values)) {
                 $this->primes = [
@@ -239,11 +237,7 @@ final class RSAKey
         if (! is_array($unpacked) || count($unpacked) === 0) {
             throw new InvalidArgumentException('Unable to get the private key');
         }
-        $hexadecimal = current($unpacked);
-        if (! is_string($hexadecimal) || $hexadecimal === '') {
-            throw new InvalidArgumentException('Unable to get the private key');
-        }
 
-        return \Brick\Math\BigInteger::fromBase($hexadecimal, 16)->toBase(10);
+        return \Brick\Math\BigInteger::fromBase(current($unpacked), 16)->toBase(10);
     }
 }

@@ -10,29 +10,24 @@ use Jose\Component\Core\Util\JsonConverter;
 use Jose\Component\Encryption\JWE;
 use Jose\Component\Encryption\Recipient;
 use LogicException;
-use Override;
 use Throwable;
 use function count;
 use function is_array;
-use function sprintf;
 
-final readonly class CompactSerializer implements JWESerializer
+final class CompactSerializer implements JWESerializer
 {
     public const NAME = 'jwe_compact';
 
-    #[Override]
     public function displayName(): string
     {
         return 'JWE Compact';
     }
 
-    #[Override]
     public function name(): string
     {
         return self::NAME;
     }
 
-    #[Override]
     public function serialize(JWE $jwe, ?int $recipientIndex = null): string
     {
         if ($recipientIndex === null) {
@@ -54,16 +49,9 @@ final readonly class CompactSerializer implements JWESerializer
         );
     }
 
-    /**
-     * The split is bounded to six segments: a valid compact JWE has exactly five, so a sixth one is enough to
-     * detect and reject any longer input. Without that bound, a delimiter-heavy string would be expanded into one
-     * array entry per delimiter before the segment count is checked, which costs about twenty-five times the size
-     * of the input in memory.
-     */
-    #[Override]
     public function unserialize(string $input): JWE
     {
-        $parts = explode('.', $input, 6);
+        $parts = explode('.', $input);
         if (count($parts) !== 5) {
             throw new InvalidArgumentException('Unsupported input');
         }

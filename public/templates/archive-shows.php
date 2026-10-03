@@ -57,6 +57,20 @@ ob_start();
 				</div>
 			<?php endif; ?>
 		</div>
+		<?php
+		$pagination = paginate_links(
+			array(
+				'type'      => 'list',
+				'prev_text' => __( 'قبلی', 'seyedcast' ),
+				'next_text' => __( 'بعدی', 'seyedcast' ),
+			)
+		);
+		if ( $pagination ) :
+			?>
+			<nav class="seyedcast-pagination" aria-label="<?php esc_attr_e( 'صفحه‌بندی پادکست‌ها', 'seyedcast' ); ?>">
+				<?php echo wp_kses_post( $pagination ); ?>
+			</nav>
+		<?php endif; ?>
 	</section>
 
 	<?php Seyedcast_Templates::partial( 'latest-episodes' ); ?>

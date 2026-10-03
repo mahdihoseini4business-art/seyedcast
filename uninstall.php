@@ -49,12 +49,6 @@ $show_ids = get_posts(
 	)
 );
 
-foreach ( $show_ids as $id ) {
-	delete_post_meta( $id, '_seyedcast_view_count' );
-	delete_post_meta( $id, '_seyedcast_total_view_count' );
-	delete_post_meta( $id, '_seyedcast_accent_color' );
-}
-
 $episode_ids = get_posts(
 	array(
 		'post_type'      => 'seyedcast_episode',
@@ -65,15 +59,28 @@ $episode_ids = get_posts(
 );
 
 foreach ( $episode_ids as $id ) {
-	delete_post_meta( $id, '_seyedcast_show_id' );
-	delete_post_meta( $id, '_seyedcast_audio_id' );
-	delete_post_meta( $id, '_seyedcast_duration' );
-	delete_post_meta( $id, '_seyedcast_episode_number' );
-	delete_post_meta( $id, '_seyedcast_view_count' );
-	delete_post_meta( $id, '_seyedcast_total_view_count' );
-	delete_post_meta( $id, '_seyedcast_listen_sum_pct' );
-	delete_post_meta( $id, '_seyedcast_listen_count' );
-	delete_post_meta( $id, '_seyedcast_push_sent' );
+	wp_delete_post( (int) $id, true );
 }
+
+foreach ( $show_ids as $id ) {
+	wp_delete_post( (int) $id, true );
+}
+
+$terms = get_terms(
+	array(
+		'taxonomy'   => 'seyedcast_topic',
+		'hide_empty' => false,
+		'fields'     => 'ids',
+	)
+);
+if ( ! is_wp_error( $terms ) ) {
+	foreach ( $terms as $term_id ) {
+		wp_delete_term( (int) $term_id, 'seyedcast_topic' );
+	}
+}
+
+delete_option( 'seyedcast_db_version' );
+delete_option( 'seyedcast_push_db_version' );
+delete_option( 'seyedcast_listen_db_version' );
 
 flush_rewrite_rules();

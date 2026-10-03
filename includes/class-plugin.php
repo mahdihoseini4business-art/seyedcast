@@ -81,6 +81,10 @@ class Seyedcast_Plugin {
 	 * Deactivate plugin.
 	 */
 	public static function deactivate() {
+		// Unregister our content types/rules before flush so they leave option_rewrite_rules.
+		unregister_post_type( 'seyedcast_episode' );
+		unregister_post_type( 'seyedcast_show' );
+		unregister_taxonomy( 'seyedcast_topic' );
 		flush_rewrite_rules();
 	}
 }

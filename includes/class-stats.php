@@ -296,13 +296,49 @@ class Seyedcast_Stats {
 	 * @param bool $is_unique Unique view flag.
 	 */
 	private static function increment_meta( $post_id, $is_unique ) {
-		$total = (int) get_post_meta( $post_id, self::TOTAL_META, true );
-		update_post_meta( $post_id, self::TOTAL_META, $total + 1 );
+		self::bump_meta( $post_id, self::TOTAL_META, 1 );
 
 		if ( $is_unique ) {
-			$unique = (int) get_post_meta( $post_id, Seyedcast_App::VIEW_META, true );
-			update_post_meta( $post_id, Seyedcast_App::VIEW_META, $unique + 1 );
+			self::bump_meta( $post_id, Seyedcast_App::VIEW_META, 1 );
 		}
+	}
+
+	/**
+	 * Atomically increment numeric post meta (best-effort).
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $key     Meta key.
+	 * @param int    $by      Increment by.
+	 */
+	private static function bump_meta( $post_id, $key, $by = 1 ) {
+		global $wpdb;
+
+		$post_id = (int) $post_id;
+		$by      = (int) $by;
+		if ( $post_id < 1 || $by < 1 ) {
+			return;
+		}
+
+		if ( '' === (string) get_post_meta( $post_id, $key, true ) ) {
+			add_post_meta( $post_id, $key, 0, true );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->postmeta} SET meta_value = CAST(meta_value AS UNSIGNED) + %d WHERE post_id = %d AND meta_key = %s",
+				$by,
+				$post_id,
+				$key
+			)
+		);
+
+		if ( ! $updated ) {
+			$current = (int) get_post_meta( $post_id, $key, true );
+			update_post_meta( $post_id, $key, $current + $by );
+		}
+
+		wp_cache_delete( $post_id, 'post_meta' );
 	}
 
 	/**

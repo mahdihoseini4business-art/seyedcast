@@ -15,21 +15,38 @@ namespace Minishlink\WebPush;
 
 class Subscription implements SubscriptionInterface
 {
+    /** @var string */
+    private $endpoint;
+
+    /** @var null|string */
+    private $publicKey;
+
+    /** @var null|string */
+    private $authToken;
+
+    /** @var null|string */
+    private $contentEncoding;
+
     /**
      * @param string|null $contentEncoding (Optional) Must be "aesgcm"
      * @throws \ErrorException
      */
     public function __construct(
-        private string  $endpoint,
-        private ?string $publicKey = null,
-        private ?string $authToken = null,
-        private ?string $contentEncoding = null
+        string $endpoint,
+        ?string $publicKey = null,
+        ?string $authToken = null,
+        ?string $contentEncoding = null
     ) {
+        $this->endpoint = $endpoint;
+
         if ($publicKey || $authToken || $contentEncoding) {
             $supportedContentEncodings = ['aesgcm', 'aes128gcm'];
-            if ($contentEncoding && !in_array($contentEncoding, $supportedContentEncodings, true)) {
+            if ($contentEncoding && !in_array($contentEncoding, $supportedContentEncodings)) {
                 throw new \ErrorException('This content encoding ('.$contentEncoding.') is not supported.');
             }
+
+            $this->publicKey = $publicKey;
+            $this->authToken = $authToken;
             $this->contentEncoding = $contentEncoding ?: "aesgcm";
         }
     }

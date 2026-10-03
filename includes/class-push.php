@@ -50,7 +50,8 @@ class Seyedcast_Push {
 	 */
 	public static function enabled() {
 		$settings = Seyedcast_Settings::get();
-		return ! empty( $settings['pwa_enabled'] ) && ! empty( $settings['push_enabled'] );
+		// Push only needs the push toggle; SW is served even if PWA install UI is off.
+		return ! empty( $settings['push_enabled'] );
 	}
 
 	/**
@@ -59,23 +60,40 @@ class Seyedcast_Push {
 	 * @return bool
 	 */
 	public static function library_ready() {
-		self::maybe_load_autoload();
-		return class_exists( '\Minishlink\WebPush\WebPush' );
+		return self::maybe_load_autoload();
 	}
 
 	/**
-	 * Load Composer autoload once.
+	 * Load Composer autoload once (never fatals the admin UI).
+	 *
+	 * @return bool
 	 */
 	public static function maybe_load_autoload() {
 		static $tried = false;
+		static $ok    = false;
 		if ( $tried ) {
-			return;
+			return $ok;
 		}
 		$tried = true;
-		$file  = SEYEDCAST_PATH . 'vendor/autoload.php';
-		if ( is_readable( $file ) ) {
-			require_once $file;
+
+		if ( PHP_VERSION_ID < 80100 ) {
+			return false;
 		}
+
+		$file = SEYEDCAST_PATH . 'vendor/autoload.php';
+		if ( ! is_readable( $file ) ) {
+			return false;
+		}
+
+		try {
+			require_once $file;
+			$ok = class_exists( '\Minishlink\WebPush\WebPush', false )
+				|| class_exists( '\Minishlink\WebPush\WebPush', true );
+		} catch ( \Throwable $e ) {
+			$ok = false;
+		}
+
+		return $ok;
 	}
 
 	/**
@@ -190,9 +208,9 @@ class Seyedcast_Push {
 		$keys = null;
 		try {
 			$keys = \Minishlink\WebPush\VAPID::createVapidKeys();
-		} catch ( Exception $e ) {
+		} catch ( \Exception $e ) {
 			$keys = self::generate_vapid_keys_openssl();
-		} catch ( Error $e ) {
+		} catch ( \Throwable $e ) {
 			$keys = self::generate_vapid_keys_openssl();
 		}
 
@@ -275,11 +293,12 @@ class Seyedcast_Push {
 		if ( ! current_user_can( 'manage_options' ) || ! self::enabled() ) {
 			return;
 		}
-		if ( self::library_ready() ) {
+		$status = self::status_report();
+		if ( ! empty( $status['ready'] ) ) {
 			return;
 		}
-		echo '<div class="notice notice-error"><p>';
-		echo esc_html__( 'Seyedcast: برای ارسال پوش نوتیفیکیشن باید وابستگی‌های Composer نصب شوند (پوشه vendor). در ریشه افزونه دستور composer install --no-dev را اجرا کنید.', 'seyedcast' );
+		echo '<div class="notice notice-error"><p><strong>Seyedcast:</strong> ';
+		echo esc_html( ! empty( $status['message'] ) ? $status['message'] : __( 'پوش نوتیفیکیشن آماده نیست.', 'seyedcast' ) );
 		echo '</p></div>';
 	}
 
@@ -305,6 +324,8 @@ class Seyedcast_Push {
 		);
 
 		$settings = Seyedcast_Settings::get();
+		$sw_scope = trailingslashit( (string) ( wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/' ) );
+
 		wp_localize_script(
 			'seyedcast-push',
 			'seyedcastPush',
@@ -312,6 +333,7 @@ class Seyedcast_Push {
 				'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
 				'nonce'         => wp_create_nonce( 'seyedcast_push' ),
 				'swUrl'         => home_url( '/seyedcast-sw.js' ),
+				'swScope'       => $sw_scope,
 				'vapidPublic'   => $keys['publicKey'],
 				'storageKey'    => 'seyedcast_push_prompt_dismissed',
 				'snoozeKey'     => 'seyedcast_push_prompt_snooze',
@@ -630,6 +652,13 @@ class Seyedcast_Push {
 		$payload   = $this->build_payload( $post );
 		$processed = $this->send_batch( $payload, $offset, self::BATCH_SIZE );
 
+		if ( is_wp_error( $processed ) ) {
+			$this->schedule_episode_push( $episode_id, $offset, 300 );
+			return;
+		}
+
+		$processed = (int) $processed;
+
 		if ( $processed >= self::BATCH_SIZE ) {
 			$this->schedule_episode_push( $episode_id, $offset + self::BATCH_SIZE, 15 );
 			return;
@@ -680,7 +709,7 @@ class Seyedcast_Push {
 	 * @param array $payload Payload.
 	 * @param int   $offset  Offset.
 	 * @param int   $limit   Limit.
-	 * @return int Number of rows processed.
+	 * @return int|WP_Error Number of rows processed, or error.
 	 */
 	private function send_batch( array $payload, $offset, $limit ) {
 		global $wpdb;
@@ -692,7 +721,7 @@ class Seyedcast_Push {
 		self::maybe_load_autoload();
 		$keys = self::get_vapid_keys();
 		if ( ! $keys || ! class_exists( '\Minishlink\WebPush\WebPush' ) ) {
-			return 0;
+			return new WP_Error( 'seyedcast_push_lib', __( 'کتابخانه web-push یا کلید VAPID در دسترس نیست.', 'seyedcast' ) );
 		}
 
 		$table = self::table_name();
@@ -720,37 +749,44 @@ class Seyedcast_Push {
 		try {
 			$web_push = new \Minishlink\WebPush\WebPush( $auth );
 			$web_push->setReuseVAPIDHeaders( true );
-		} catch ( Exception $e ) {
-			return 0;
+		} catch ( \Throwable $e ) {
+			return new WP_Error( 'seyedcast_push_init', $e->getMessage() ? $e->getMessage() : __( 'راه‌اندازی WebPush ناموفق بود.', 'seyedcast' ) );
 		}
 
 		$json = wp_json_encode( $payload );
 		foreach ( $rows as $row ) {
-			$subscription = \Minishlink\WebPush\Subscription::create(
-				array(
-					'endpoint'        => $row->endpoint,
-					'contentEncoding' => 'aes128gcm',
-					'keys'            => array(
-						'p256dh' => $row->p256dh,
-						'auth'   => $row->auth,
-					),
-				)
-			);
-			$web_push->queueNotification( $subscription, $json );
+			try {
+				$subscription = \Minishlink\WebPush\Subscription::create(
+					array(
+						'endpoint' => $row->endpoint,
+						'keys'     => array(
+							'p256dh' => $row->p256dh,
+							'auth'   => $row->auth,
+						),
+					)
+				);
+				$web_push->queueNotification( $subscription, $json );
+			} catch ( \Throwable $e ) {
+				$this->delete_by_endpoint( $row->endpoint );
+			}
 		}
 
-		foreach ( $web_push->flush() as $report ) {
-			if ( $report->isSubscriptionExpired() ) {
-				$this->delete_by_endpoint( $report->getEndpoint() );
-				continue;
+		try {
+			foreach ( $web_push->flush() as $report ) {
+				if ( $report->isSubscriptionExpired() ) {
+					$this->delete_by_endpoint( $report->getEndpoint() );
+					continue;
+				}
+				if ( $report->isSuccess() ) {
+					continue;
+				}
+				$code = $report->getResponse() ? $report->getResponse()->getStatusCode() : 0;
+				if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
+					$this->delete_by_endpoint( $report->getEndpoint() );
+				}
 			}
-			if ( $report->isSuccess() ) {
-				continue;
-			}
-			$code = $report->getResponse() ? $report->getResponse()->getStatusCode() : 0;
-			if ( in_array( (int) $code, array( 404, 410 ), true ) ) {
-				$this->delete_by_endpoint( $report->getEndpoint() );
-			}
+		} catch ( \Throwable $e ) {
+			return new WP_Error( 'seyedcast_push_flush', $e->getMessage() ? $e->getMessage() : __( 'ارسال پوش ناموفق بود.', 'seyedcast' ) );
 		}
 
 		return count( $rows );
@@ -799,16 +835,27 @@ class Seyedcast_Push {
 			'tag'   => 'seyedcast-test-' . time(),
 		);
 
+		$keys = self::get_vapid_keys();
+		if ( ! $keys ) {
+			wp_send_json_error( array( 'message' => __( 'کلید VAPID ساخته نشد. OpenSSL را روی سرور فعال کنید.', 'seyedcast' ) ), 500 );
+		}
+
 		$processed = $this->send_batch( $payload, 0, self::BATCH_SIZE );
+		if ( is_wp_error( $processed ) ) {
+			wp_send_json_error( array( 'message' => $processed->get_error_message() ), 500 );
+		}
+
 		if ( $processed >= self::BATCH_SIZE && $count > self::BATCH_SIZE ) {
-			// Continue remaining via a fake episode cron is awkward; loop remaining synchronously in chunks with time check.
 			$offset = self::BATCH_SIZE;
 			while ( $offset < $count ) {
 				$n = $this->send_batch( $payload, $offset, self::BATCH_SIZE );
+				if ( is_wp_error( $n ) ) {
+					wp_send_json_error( array( 'message' => $n->get_error_message() ), 500 );
+				}
 				if ( $n < 1 ) {
 					break;
 				}
-				$offset += $n;
+				$offset += (int) $n;
 			}
 		}
 
@@ -818,5 +865,64 @@ class Seyedcast_Push {
 				'message' => sprintf( __( 'اعلان آزمایشی برای %d مشترک ارسال شد.', 'seyedcast' ), $count ),
 			)
 		);
+	}
+
+	/**
+	 * Admin helper: diagnose push readiness for settings UI.
+	 *
+	 * @return array{ready:bool,library:bool,vapid:bool,table:bool,message:string}
+	 */
+	public static function status_report() {
+		try {
+			if ( PHP_VERSION_ID < 80100 ) {
+				return array(
+					'ready'   => false,
+					'library' => false,
+					'vapid'   => false,
+					'table'   => false,
+					'message' => sprintf(
+						/* translators: %s: current PHP version */
+						__( 'برای پوش نوتیفیکیشن PHP 8.1 یا بالاتر لازم است. نسخه فعلی سرور: %s', 'seyedcast' ),
+						PHP_VERSION
+					),
+				);
+			}
+
+			$library = self::library_ready();
+			$vapid   = $library ? (bool) self::get_vapid_keys() : false;
+			$table   = self::table_exists();
+			$ready   = $library && $vapid && $table;
+
+			$message = '';
+			if ( ! $library ) {
+				$message = __( 'کتابخانه web-push روی این سرور لود نشد. PHP را به 8.1+ ارتقا دهید یا نسخه جدید افزونه (با vendor سازگار) را نصب کنید.', 'seyedcast' );
+			} elseif ( ! $vapid ) {
+				$message = __( 'کلید VAPID ساخته نشد. افزونه OpenSSL روی PHP سرور لازم است.', 'seyedcast' );
+			} elseif ( ! $table ) {
+				$message = __( 'جدول مشترکان پوش ساخته نشده است.', 'seyedcast' );
+				self::ensure_table();
+				$table = self::table_exists();
+				$ready = $library && $vapid && $table;
+				if ( $ready ) {
+					$message = '';
+				}
+			}
+
+			return array(
+				'ready'   => $ready,
+				'library' => $library,
+				'vapid'   => $vapid,
+				'table'   => $table,
+				'message' => $message,
+			);
+		} catch ( \Throwable $e ) {
+			return array(
+				'ready'   => false,
+				'library' => false,
+				'vapid'   => false,
+				'table'   => false,
+				'message' => __( 'خطا در بررسی وضعیت پوش. تنظیمات دیگر سایت تحت تأثیر قرار نمی‌گیرد.', 'seyedcast' ),
+			);
+		}
 	}
 }

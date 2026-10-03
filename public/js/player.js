@@ -191,6 +191,7 @@
 
 		var params = new URLSearchParams();
 		params.set('action', progressAction);
+		params.set('nonce', cfg.progressNonce || '');
 		params.set('episode_id', String(state.id));
 		params.set('pct', String(pct));
 		params.set('listener_id', getListenerId());

@@ -161,6 +161,7 @@ class Seyedcast_Assets {
 				'progressKey'    => 'seyedcast_episode_progress_v1',
 				'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
 				'progressAction' => 'seyedcast_listen_progress',
+				'progressNonce'  => wp_create_nonce( 'seyedcast_listen_progress' ),
 				'i18n'           => array(
 					'play'         => __( 'پخش', 'seyedcast' ),
 					'pause'        => __( 'توقف', 'seyedcast' ),

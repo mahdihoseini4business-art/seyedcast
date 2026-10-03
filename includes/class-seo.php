@@ -169,7 +169,8 @@ class Seyedcast_Seo {
 	 * @param array $data Data.
 	 */
 	private function print_jsonld( $data ) {
-		echo '<script type="application/ld+json">' . wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) . '</script>' . "\n";
+		$flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+		echo '<script type="application/ld+json">' . wp_json_encode( $data, $flags ) . '</script>' . "\n";
 	}
 
 	/**

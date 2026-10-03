@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 /**
  * @author Igor Timoshenkov [it@campoint.net]
  * @started: 03.09.2018 9:21
@@ -14,12 +14,35 @@ use Psr\Http\Message\ResponseInterface;
  */
 class MessageSentReport implements \JsonSerializable
 {
-    public function __construct(
-        protected RequestInterface $request,
-        protected ?ResponseInterface $response = null,
-        protected bool $success = true,
-        protected string $reason = 'OK'
-    ) {
+    /**
+     * @var boolean
+     */
+    protected $success;
+
+    /**
+     * @var RequestInterface
+     */
+    protected $request;
+
+    /**
+     * @var ResponseInterface | null
+     */
+    protected $response;
+
+    /**
+     * @var string
+     */
+    protected $reason;
+
+    /**
+     * @param string $reason
+     */
+    public function __construct(RequestInterface $request, ?ResponseInterface $response = null, bool $success = true, $reason = 'OK')
+    {
+        $this->request  = $request;
+        $this->response = $response;
+        $this->success  = $success;
+        $this->reason   = $reason;
     }
 
     public function isSuccess(): bool
@@ -87,7 +110,11 @@ class MessageSentReport implements \JsonSerializable
 
     public function getResponseContent(): ?string
     {
-        return $this->response?->getBody()->getContents();
+        if (!$this->response) {
+            return null;
+        }
+
+        return $this->response->getBody()->getContents();
     }
 
     public function jsonSerialize(): array

@@ -195,8 +195,15 @@
 		});
 	}
 
+	function registerSw() {
+		var opts = cfg.swScope ? { scope: cfg.swScope } : undefined;
+		return navigator.serviceWorker.register(cfg.swUrl, opts).then(function () {
+			return navigator.serviceWorker.ready;
+		});
+	}
+
 	function ensureSubscription() {
-		return navigator.serviceWorker.register(cfg.swUrl).then(function (reg) {
+		return registerSw().then(function (reg) {
 			return reg.pushManager.getSubscription().then(function (existing) {
 				if (existing) {
 					return postSubscription(existing).then(function (ok) {
@@ -277,9 +284,7 @@
 
 	if (alreadySubscribed() || hardDismissed() || isSnoozed()) {
 		if (alreadySubscribed() || (typeof Notification !== 'undefined' && Notification.permission === 'granted')) {
-			navigator.serviceWorker.register(cfg.swUrl).then(function () {
-				return ensureSubscription();
-			}).catch(function () {
+			ensureSubscription().catch(function () {
 				/* ignore */
 			});
 		}

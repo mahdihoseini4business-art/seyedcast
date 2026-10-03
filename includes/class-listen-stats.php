@@ -206,14 +206,49 @@ class Seyedcast_Listen_Stats {
 	 * @param bool $new_listener Whether this is a new listener.
 	 */
 	private static function adjust_episode_meta( $episode_id, $sum_delta, $new_listener ) {
-		$sum   = (int) get_post_meta( $episode_id, self::SUM_META, true );
-		$count = (int) get_post_meta( $episode_id, self::COUNT_META, true );
-
-		update_post_meta( $episode_id, self::SUM_META, $sum + max( 0, (int) $sum_delta ) );
-
+		$sum_delta = max( 0, (int) $sum_delta );
+		self::bump_meta( $episode_id, self::SUM_META, $sum_delta );
 		if ( $new_listener ) {
-			update_post_meta( $episode_id, self::COUNT_META, $count + 1 );
+			self::bump_meta( $episode_id, self::COUNT_META, 1 );
 		}
+	}
+
+	/**
+	 * Atomically increment numeric post meta (best-effort).
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $key     Meta key.
+	 * @param int    $by      Increment.
+	 */
+	private static function bump_meta( $post_id, $key, $by ) {
+		global $wpdb;
+
+		$post_id = (int) $post_id;
+		$by      = (int) $by;
+		if ( $post_id < 1 || $by < 1 ) {
+			return;
+		}
+
+		if ( '' === (string) get_post_meta( $post_id, $key, true ) ) {
+			add_post_meta( $post_id, $key, 0, true );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->postmeta} SET meta_value = CAST(meta_value AS UNSIGNED) + %d WHERE post_id = %d AND meta_key = %s",
+				$by,
+				$post_id,
+				$key
+			)
+		);
+
+		if ( ! $updated ) {
+			$current = (int) get_post_meta( $post_id, $key, true );
+			update_post_meta( $post_id, $key, $current + $by );
+		}
+
+		wp_cache_delete( $post_id, 'post_meta' );
 	}
 
 	/**
@@ -305,11 +340,16 @@ class Seyedcast_Listen_Stats {
 	 * AJAX: record listen progress from the sticky player.
 	 */
 	public function ajax_progress() {
+		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
+		if ( ! $nonce || ! wp_verify_nonce( $nonce, 'seyedcast_listen_progress' ) ) {
+			wp_send_json_error( array( 'message' => __( 'نشست نامعتبر است. صفحه را رفرش کنید.', 'seyedcast' ) ), 403 );
+		}
+
 		self::rate_limit_ajax( 'listen_progress', 60, 60 );
 
-		$episode_id  = isset( $_POST['episode_id'] ) ? absint( wp_unslash( $_POST['episode_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$pct         = isset( $_POST['pct'] ) ? absint( wp_unslash( $_POST['pct'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$listener_id = isset( $_POST['listener_id'] ) ? sanitize_text_field( wp_unslash( $_POST['listener_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$episode_id  = isset( $_POST['episode_id'] ) ? absint( wp_unslash( $_POST['episode_id'] ) ) : 0;
+		$pct         = isset( $_POST['pct'] ) ? absint( wp_unslash( $_POST['pct'] ) ) : 0;
+		$listener_id = isset( $_POST['listener_id'] ) ? sanitize_text_field( wp_unslash( $_POST['listener_id'] ) ) : '';
 
 		if ( $episode_id < 1 || ! self::is_valid_listener_id( $listener_id ) ) {
 			wp_send_json_error( array( 'message' => __( 'درخواست نامعتبر.', 'seyedcast' ) ), 400 );

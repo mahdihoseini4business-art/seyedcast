@@ -8,14 +8,12 @@ use Brick\Math\BigInteger;
 use InvalidArgumentException;
 use Jose\Component\Core\JWK;
 use Jose\Component\Core\Util\Base64UrlSafe;
-use Jose\Component\Core\Util\Ecc\BrainpoolCurve;
 use Jose\Component\Core\Util\Ecc\Curve;
 use Jose\Component\Core\Util\Ecc\EcDH;
 use Jose\Component\Core\Util\Ecc\NistCurve;
 use Jose\Component\Core\Util\Ecc\PrivateKey;
 use Jose\Component\Core\Util\ECKey;
 use Jose\Component\Encryption\Algorithm\KeyEncryption\Util\ConcatKDF;
-use Override;
 use RuntimeException;
 use Throwable;
 use function array_key_exists;
@@ -24,12 +22,9 @@ use function function_exists;
 use function in_array;
 use function is_array;
 use function is_string;
-use function sprintf;
-use function strlen;
 
-abstract readonly class AbstractECDH implements KeyAgreement
+abstract class AbstractECDH implements KeyAgreement
 {
-    #[Override]
     public function allowedKeyTypes(): array
     {
         return ['EC', 'OKP'];
@@ -39,7 +34,6 @@ abstract readonly class AbstractECDH implements KeyAgreement
      * @param array<string, mixed> $complete_header
      * @param array<string, mixed> $additional_header_values
      */
-    #[Override]
     public function getAgreementKey(
         int $encryptionKeyLength,
         string $algorithm,
@@ -68,7 +62,6 @@ abstract readonly class AbstractECDH implements KeyAgreement
         return ConcatKDF::generate($agreed_key, $algorithm, $encryptionKeyLength, $apu, $apv);
     }
 
-    #[Override]
     public function getKeyManagementMode(): string
     {
         return self::MODE_AGREEMENT;
@@ -84,23 +77,20 @@ abstract readonly class AbstractECDH implements KeyAgreement
             case 'P-256':
             case 'P-384':
             case 'P-521':
-            case 'BP-256':
-            case 'BP-384':
-            case 'BP-512':
                 $curve = $this->getCurve($crv);
                 if (function_exists('openssl_pkey_derive')) {
                     try {
                         $publicPem = ECKey::convertPublicKeyToPEM($public_key);
                         $privatePem = ECKey::convertPrivateKeyToPEM($private_key);
 
-                        $res = openssl_pkey_derive($publicPem, $privatePem);
+                        $res = openssl_pkey_derive($publicPem, $privatePem, $curve->getSize());
                         if ($res === false) {
                             throw new RuntimeException('Unable to derive the key');
                         }
 
                         return $res;
                     } catch (Throwable) {
-                        // Does nothing. Will fallback to the pure PHP function
+                        //Does nothing. Will fallback to the pure PHP function
                     }
                 }
                 $x = $public_key->get('x');
@@ -162,7 +152,7 @@ abstract readonly class AbstractECDH implements KeyAgreement
             throw new InvalidArgumentException('Invalid key parameter "crv"');
         }
         $private_key = match ($crv) {
-            'P-256', 'P-384', 'P-521', 'BP-256', 'BP-384', 'BP-512' => $senderKey ?? ECKey::createECKey($crv),
+            'P-256', 'P-384', 'P-521' => $senderKey ?? ECKey::createECKey($crv),
             'X25519' => $senderKey ?? $this->createOKPKey('X25519'),
             default => throw new InvalidArgumentException(sprintf('The curve "%s" is not supported', $crv)),
         };
@@ -225,9 +215,6 @@ abstract readonly class AbstractECDH implements KeyAgreement
             case 'P-256':
             case 'P-384':
             case 'P-521':
-            case 'BP-256':
-            case 'BP-384':
-            case 'BP-512':
                 if (! $key->has('y')) {
                     throw new InvalidArgumentException('The key parameter "y" is missing.');
                 }
@@ -240,7 +227,7 @@ abstract readonly class AbstractECDH implements KeyAgreement
             default:
                 throw new InvalidArgumentException(sprintf('The curve "%s" is not supported', $crv));
         }
-        if ($is_private && ! $key->has('d')) {
+        if ($is_private === true && ! $key->has('d')) {
             throw new InvalidArgumentException('The key parameter "d" is missing.');
         }
     }
@@ -251,9 +238,6 @@ abstract readonly class AbstractECDH implements KeyAgreement
             'P-256' => NistCurve::curve256(),
             'P-384' => NistCurve::curve384(),
             'P-521' => NistCurve::curve521(),
-            'BP-256' => BrainpoolCurve::curve256(),
-            'BP-384' => BrainpoolCurve::curve384(),
-            'BP-512' => BrainpoolCurve::curve512(),
             default => throw new InvalidArgumentException(sprintf('The curve "%s" is not supported', $crv)),
         };
     }
@@ -261,7 +245,7 @@ abstract readonly class AbstractECDH implements KeyAgreement
     private function convertBase64ToBigInteger(string $value): BigInteger
     {
         $data = unpack('H*', Base64UrlSafe::decodeNoPadding($value));
-        if (! is_array($data) || ! isset($data[1]) || ! is_string($data[1]) || $data[1] === '') {
+        if (! is_array($data) || ! isset($data[1]) || ! is_string($data[1])) {
             throw new InvalidArgumentException('Unable to convert base64 to integer');
         }
 
@@ -275,7 +259,7 @@ abstract readonly class AbstractECDH implements KeyAgreement
         }
         $hex = $dec->toBase(16);
 
-        if (strlen($hex) % 2 !== 0) {
+        if (mb_strlen($hex, '8bit') % 2 !== 0) {
             $hex = '0' . $hex;
         }
 
@@ -305,8 +289,8 @@ abstract readonly class AbstractECDH implements KeyAgreement
             case 'Ed25519':
                 $keyPair = sodium_crypto_sign_keypair();
                 $secret = sodium_crypto_sign_secretkey($keyPair);
-                $secretLength = strlen($secret);
-                $d = substr($secret, 0, -$secretLength / 2);
+                $secretLength = mb_strlen($secret, '8bit');
+                $d = mb_substr($secret, 0, -$secretLength / 2, '8bit');
                 $x = sodium_crypto_sign_publickey($keyPair);
 
                 break;

@@ -17,13 +17,10 @@ use Jose\Component\Encryption\Algorithm\KeyEncryption\KeyAgreementWithKeyWrappin
 use Jose\Component\Encryption\Algorithm\KeyEncryption\KeyEncryption;
 use Jose\Component\Encryption\Algorithm\KeyEncryption\KeyWrapping;
 use Jose\Component\Encryption\Algorithm\KeyEncryptionAlgorithm;
+use Jose\Component\Encryption\Compression\CompressionMethodManager;
 use Throwable;
-use function count;
-use function func_num_args;
-use function is_callable;
+use function array_key_exists;
 use function is_string;
-use function sprintf;
-use function strlen;
 
 class JWEDecrypter
 {
@@ -31,20 +28,40 @@ class JWEDecrypter
 
     private readonly AlgorithmManager $contentEncryptionAlgorithmManager;
 
-    public function __construct(AlgorithmManager $algorithmManager)
-    {
-        $keyEncryptionAlgorithms = [];
-        $contentEncryptionAlgorithms = [];
-        foreach ($algorithmManager->all() as $key => $algorithm) {
-            if ($algorithm instanceof KeyEncryptionAlgorithm) {
-                $keyEncryptionAlgorithms[$key] = $algorithm;
-            }
-            if ($algorithm instanceof ContentEncryptionAlgorithm) {
-                $contentEncryptionAlgorithms[$key] = $algorithm;
-            }
+    public function __construct(
+        AlgorithmManager $algorithmManager,
+        null|AlgorithmManager $contentEncryptionAlgorithmManager,
+        private readonly null|CompressionMethodManager $compressionMethodManager = null
+    ) {
+        if ($compressionMethodManager !== null) {
+            trigger_deprecation(
+                'web-token/jwt-library',
+                '3.3.0',
+                'The parameter "$compressionMethodManager" is deprecated and will be removed in 4.0.0. Compression is not recommended for JWE. Please set "null" instead.'
+            );
         }
-        $this->keyEncryptionAlgorithmManager = new AlgorithmManager($keyEncryptionAlgorithms);
-        $this->contentEncryptionAlgorithmManager = new AlgorithmManager($contentEncryptionAlgorithms);
+        if ($contentEncryptionAlgorithmManager !== null) {
+            trigger_deprecation(
+                'web-token/jwt-library',
+                '3.3.0',
+                'The parameter "$contentEncryptionAlgorithmManager" is deprecated and will be removed in 4.0.0. Please set all algorithms in the first argument and set "null" instead.'
+            );
+            $this->keyEncryptionAlgorithmManager = $algorithmManager;
+            $this->contentEncryptionAlgorithmManager = $contentEncryptionAlgorithmManager;
+        } else {
+            $keyEncryptionAlgorithms = [];
+            $contentEncryptionAlgorithms = [];
+            foreach ($algorithmManager->all() as $key => $algorithm) {
+                if ($algorithm instanceof KeyEncryptionAlgorithm) {
+                    $keyEncryptionAlgorithms[$key] = $algorithm;
+                }
+                if ($algorithm instanceof ContentEncryptionAlgorithm) {
+                    $contentEncryptionAlgorithms[$key] = $algorithm;
+                }
+            }
+            $this->keyEncryptionAlgorithmManager = new AlgorithmManager($keyEncryptionAlgorithms);
+            $this->contentEncryptionAlgorithmManager = new AlgorithmManager($contentEncryptionAlgorithms);
+        }
     }
 
     /**
@@ -64,29 +81,30 @@ class JWEDecrypter
     }
 
     /**
+     * Returns the compression method manager.
+     * @deprecated This method is deprecated and will be removed in v4.0. Compression is not recommended for JWE.
+     */
+    public function getCompressionMethodManager(): null|CompressionMethodManager
+    {
+        return $this->compressionMethodManager;
+    }
+
+    /**
      * This method will try to decrypt the given JWE and recipient using a JWK.
      *
      * @param JWE $jwe A JWE object to decrypt
      * @param JWK $jwk The key used to decrypt the input
      * @param int $recipient The recipient used to decrypt the token
-     * @param JWK|null $senderKey The sender key, when the key management algorithm is a static key agreement
      */
     public function decryptUsingKey(JWE &$jwe, JWK $jwk, int $recipient, ?JWK $senderKey = null): bool
     {
         $jwkset = new JWKSet([$jwk]);
-        $successJwk = null;
 
-        return $this->decryptUsingKeySet($jwe, $jwkset, $recipient, $successJwk, $senderKey);
+        return $this->decryptUsingKeySet($jwe, $jwkset, $recipient, $senderKey);
     }
 
     /**
      * This method will try to decrypt the given JWE and recipient using a JWKSet.
-     *
-     * A key that cannot be used, or that does not decrypt the recipient, does not abort the decryption: the next key of
-     * the key set is tried and the reason of the failure is otherwise lost. A callable is accepted as an additional
-     * argument to observe those failures; it is called with every discarded Throwable. That argument is not part of the
-     * signature yet (it will be in 5.0.0) and is read with func_num_args()/func_get_arg(5), so that classes extending
-     * this one remain compatible.
      *
      * @param JWE $jwe A JWE object to decrypt
      * @param JWKSet $jwkset The key set used to decrypt the input
@@ -100,10 +118,6 @@ class JWEDecrypter
         ?JWK &$jwk = null,
         ?JWK $senderKey = null
     ): bool {
-        $onError = func_num_args() >= 6 ? func_get_arg(5) : null;
-        if (! is_callable($onError)) {
-            $onError = null;
-        }
         if ($jwkset->count() === 0) {
             throw new InvalidArgumentException('No key in the key set.');
         }
@@ -114,7 +128,7 @@ class JWEDecrypter
             throw new InvalidArgumentException('The JWE does not contain any recipient.');
         }
 
-        $plaintext = $this->decryptRecipientKey($jwe, $jwkset, $recipient, $jwk, $senderKey, $onError);
+        $plaintext = $this->decryptRecipientKey($jwe, $jwkset, $recipient, $jwk, $senderKey);
         if ($plaintext !== null) {
             $jwe = $jwe->withPayload($plaintext);
 
@@ -124,40 +138,23 @@ class JWEDecrypter
         return false;
     }
 
-    /**
-     * The header parameter names of the shared protected header, the shared unprotected header and the
-     * per-recipient header must be disjoint (RFC 7516 section 7.2.1), as enforced by the JWEBuilder when the
-     * token is created. Otherwise an unprotected parameter is able to redefine a protected one. The headers
-     * are then merged in the same order as the JWEBuilder does, so that the protected header always wins.
-     *
-     * The shared unprotected header is never a valid source for "alg" and "enc": it is not covered by the
-     * AAD and, unlike the per-recipient header, nothing requires those parameters to be located there.
-     *
-     * @param callable(Throwable): void|null $onError
-     */
     private function decryptRecipientKey(
         JWE $jwe,
         JWKSet $jwkset,
         int $i,
         ?JWK &$successJwk = null,
-        ?JWK $senderKey = null,
-        ?callable $onError = null
+        ?JWK $senderKey = null
     ): ?string {
         $recipient = $jwe->getRecipient($i);
-        $sharedProtectedHeader = $jwe->getSharedProtectedHeader();
-        $sharedHeader = $jwe->getSharedHeader();
-        $recipientHeader = $recipient->getHeader();
-
-        $this->checkDuplicatedHeaderParameters($sharedProtectedHeader, $sharedHeader);
-        $this->checkDuplicatedHeaderParameters($sharedProtectedHeader, $recipientHeader);
-        $this->checkDuplicatedHeaderParameters($sharedHeader, $recipientHeader);
-
-        $completeHeader = array_merge($sharedHeader, $recipientHeader, $sharedProtectedHeader);
+        $completeHeader = array_merge(
+            $jwe->getSharedProtectedHeader(),
+            $jwe->getSharedHeader(),
+            $recipient->getHeader()
+        );
         $this->checkCompleteHeader($completeHeader);
 
-        $protectedAndRecipientHeader = array_merge($recipientHeader, $sharedProtectedHeader);
-        $key_encryption_algorithm = $this->getKeyEncryptionAlgorithm($protectedAndRecipientHeader);
-        $content_encryption_algorithm = $this->getContentEncryptionAlgorithm($protectedAndRecipientHeader);
+        $key_encryption_algorithm = $this->getKeyEncryptionAlgorithm($completeHeader);
+        $content_encryption_algorithm = $this->getContentEncryptionAlgorithm($completeHeader);
 
         $this->checkIvSize($jwe->getIV(), $content_encryption_algorithm->getIVSize());
 
@@ -178,15 +175,12 @@ class JWEDecrypter
                     $completeHeader
                 );
                 $this->checkCekSize($cek, $key_encryption_algorithm, $content_encryption_algorithm);
-                $payload = $this->decryptPayload($jwe, $cek, $content_encryption_algorithm);
+                $payload = $this->decryptPayload($jwe, $cek, $content_encryption_algorithm, $completeHeader);
                 $successJwk = $recipientKey;
 
                 return $payload;
-            } catch (Throwable $throwable) {
-                if ($onError !== null) {
-                    $onError($throwable);
-                }
-
+            } catch (Throwable) {
+                //We do nothing, we continue with other keys
                 continue;
             }
         }
@@ -202,7 +196,7 @@ class JWEDecrypter
         if ($keyEncryptionAlgorithm instanceof DirectEncryption || $keyEncryptionAlgorithm instanceof KeyAgreement) {
             return;
         }
-        if (strlen($cek) * 8 !== $algorithm->getCEKSize()) {
+        if (mb_strlen($cek, '8bit') * 8 !== $algorithm->getCEKSize()) {
             throw new InvalidArgumentException('Invalid CEK size');
         }
     }
@@ -212,7 +206,7 @@ class JWEDecrypter
         if ($iv === null && $requiredIvSize !== 0) {
             throw new InvalidArgumentException('Invalid IV size');
         }
-        if (is_string($iv) && strlen($iv) !== $requiredIvSize / 8) {
+        if (is_string($iv) && mb_strlen($iv, '8bit') !== $requiredIvSize / 8) {
             throw new InvalidArgumentException('Invalid IV size');
         }
     }
@@ -246,25 +240,18 @@ class JWEDecrypter
                 $completeHeader
             );
         }
-        // The size of the key expected by the content encryption algorithm is passed as an additional
-        // argument. It is not part of the interfaces yet (it will be in 5.0.0): implementations that do not
-        // expect it simply ignore it, the others read it with func_num_args()/func_get_arg(3).
         if ($key_encryption_algorithm instanceof KeyEncryption) {
-            // @phpstan-ignore arguments.count (the fourth argument will be part of the interface in 5.0.0)
             return $key_encryption_algorithm->decryptKey(
                 $recipientKey,
                 $recipient->getEncryptedKey() ?? '',
-                $completeHeader,
-                $content_encryption_algorithm->getCEKSize()
+                $completeHeader
             );
         }
         if ($key_encryption_algorithm instanceof KeyWrapping) {
-            // @phpstan-ignore arguments.count (the fourth argument will be part of the interface in 5.0.0)
             return $key_encryption_algorithm->unwrapKey(
                 $recipientKey,
                 $recipient->getEncryptedKey() ?? '',
-                $completeHeader,
-                $content_encryption_algorithm->getCEKSize()
+                $completeHeader
             );
         }
 
@@ -275,8 +262,9 @@ class JWEDecrypter
         JWE $jwe,
         string $cek,
         ContentEncryptionAlgorithm $content_encryption_algorithm,
+        array $completeHeader
     ): string {
-        return $content_encryption_algorithm->decryptContent(
+        $payload = $content_encryption_algorithm->decryptContent(
             $jwe->getCiphertext() ?? '',
             $cek,
             $jwe->getIV() ?? '',
@@ -284,6 +272,19 @@ class JWEDecrypter
             $jwe->getEncodedSharedProtectedHeader(),
             $jwe->getTag() ?? ''
         );
+
+        return $this->decompressIfNeeded($payload, $completeHeader);
+    }
+
+    private function decompressIfNeeded(string $payload, array $completeHeaders): string
+    {
+        if ($this->compressionMethodManager === null || ! array_key_exists('zip', $completeHeaders)) {
+            return $payload;
+        }
+
+        $compression_method = $this->compressionMethodManager->get($completeHeaders['zip']);
+
+        return $compression_method->uncompress($payload);
     }
 
     private function checkCompleteHeader(array $completeHeaders): void
@@ -295,52 +296,29 @@ class JWEDecrypter
         }
     }
 
-    private function getKeyEncryptionAlgorithm(array $header): KeyEncryptionAlgorithm
+    private function getKeyEncryptionAlgorithm(array $completeHeaders): KeyEncryptionAlgorithm
     {
-        $alg = $header['alg'] ?? null;
-        if (! is_string($alg) || $alg === '') {
-            throw new InvalidArgumentException(
-                'The "alg" parameter must be a non-empty string set in the protected header or in the recipient header.'
-            );
-        }
-        $key_encryption_algorithm = $this->keyEncryptionAlgorithmManager->get($alg);
+        $key_encryption_algorithm = $this->keyEncryptionAlgorithmManager->get($completeHeaders['alg']);
         if (! $key_encryption_algorithm instanceof KeyEncryptionAlgorithm) {
             throw new InvalidArgumentException(sprintf(
                 'The key encryption algorithm "%s" is not supported or does not implement KeyEncryptionAlgorithm interface.',
-                $alg
+                $completeHeaders['alg']
             ));
         }
 
         return $key_encryption_algorithm;
     }
 
-    private function getContentEncryptionAlgorithm(array $header): ContentEncryptionAlgorithm
+    private function getContentEncryptionAlgorithm(array $completeHeader): ContentEncryptionAlgorithm
     {
-        $enc = $header['enc'] ?? null;
-        if (! is_string($enc) || $enc === '') {
-            throw new InvalidArgumentException(
-                'The "enc" parameter must be a non-empty string set in the protected header or in the recipient header.'
-            );
-        }
-        $content_encryption_algorithm = $this->contentEncryptionAlgorithmManager->get($enc);
+        $content_encryption_algorithm = $this->contentEncryptionAlgorithmManager->get($completeHeader['enc']);
         if (! $content_encryption_algorithm instanceof ContentEncryptionAlgorithm) {
             throw new InvalidArgumentException(sprintf(
-                'The content encryption algorithm "%s" is not supported or does not implement the ContentEncryption interface.',
-                $enc
+                'The key encryption algorithm "%s" is not supported or does not implement the ContentEncryption interface.',
+                $completeHeader['enc']
             ));
         }
 
         return $content_encryption_algorithm;
-    }
-
-    private function checkDuplicatedHeaderParameters(array $header1, array $header2): void
-    {
-        $inter = array_intersect_key($header1, $header2);
-        if (count($inter) !== 0) {
-            throw new InvalidArgumentException(sprintf(
-                'The header contains duplicated entries: %s.',
-                implode(', ', array_keys($inter))
-            ));
-        }
     }
 }

@@ -2335,6 +2335,48 @@ body.seyedcast-player-open .seyedcast-toast {
 	}
 }
 
+.seyedcast-pagination {
+	margin: 1.75rem 0 0.5rem;
+	text-align: center;
+}
+
+.seyedcast-pagination .page-numbers {
+	list-style: none;
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin: 0;
+	padding: 0;
+	justify-content: center;
+}
+
+.seyedcast-pagination .page-numbers li {
+	margin: 0;
+}
+
+.seyedcast-pagination .page-numbers a,
+.seyedcast-pagination .page-numbers span {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 2.25rem;
+	min-height: 2.25rem;
+	padding: 0.35rem 0.65rem;
+	border-radius: 999px;
+	border: 1px solid var(--sc-line, rgba(255, 255, 255, 0.12));
+	background: var(--sc-surface, #181818);
+	color: inherit;
+	font-size: 0.9rem;
+	text-decoration: none;
+}
+
+.seyedcast-pagination .page-numbers .current {
+	background: var(--sc-primary, #1db954);
+	border-color: transparent;
+	color: #fff;
+	font-weight: 700;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.seyedcast-app *,
 	.seyedcast-app *::before,

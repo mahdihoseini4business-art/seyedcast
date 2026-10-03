@@ -10,7 +10,7 @@ use const JSON_THROW_ON_ERROR;
 use const JSON_UNESCAPED_SLASHES;
 use const JSON_UNESCAPED_UNICODE;
 
-final readonly class JsonConverter
+final class JsonConverter
 {
     public static function encode(mixed $payload): string
     {
@@ -24,7 +24,12 @@ final readonly class JsonConverter
     public static function decode(string $payload): mixed
     {
         try {
-            return json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+            return json_decode(
+                $payload,
+                true,
+                512,
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+            );
         } catch (Throwable $throwable) {
             throw new InvalidArgumentException('Unsupported input.', $throwable->getCode(), $throwable);
         }

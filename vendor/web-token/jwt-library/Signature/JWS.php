@@ -6,7 +6,6 @@ namespace Jose\Component\Signature;
 
 use InvalidArgumentException;
 use Jose\Component\Core\JWT;
-use Override;
 use function count;
 
 /**
@@ -26,7 +25,6 @@ class JWS implements JWT
     ) {
     }
 
-    #[Override]
     public function getPayload(): ?string
     {
         return $this->payload;
@@ -45,7 +43,7 @@ class JWS implements JWT
      */
     public function getEncodedPayload(): ?string
     {
-        if ($this->isPayloadDetached()) {
+        if ($this->isPayloadDetached() === true) {
             return null;
         }
 
@@ -79,8 +77,8 @@ class JWS implements JWT
      *
      * @internal
      *
-     * @param array<string, mixed> $protectedHeader
-     * @param array<string, mixed> $header
+     * @param array{alg?: string, string?: mixed} $protectedHeader
+     * @param array{alg?: string, string?: mixed} $header
      */
     public function addSignature(
         string $signature,

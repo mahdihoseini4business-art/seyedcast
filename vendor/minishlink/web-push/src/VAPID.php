@@ -54,7 +54,7 @@ class VAPID
                 throw new \ErrorException('Failed to convert VAPID public key from hexadecimal to binary');
             }
             $vapid['publicKey'] = base64_encode($binaryPublicKey);
-            $vapid['privateKey'] = base64_encode(str_pad(Base64Url::decode($jwk->get('d')), self::PRIVATE_KEY_LENGTH, '0', STR_PAD_LEFT));
+            $vapid['privateKey'] = base64_encode(str_pad(Base64Url::decode($jwk->get('d')), 2 * self::PRIVATE_KEY_LENGTH, '0', STR_PAD_LEFT));
         }
 
         if (!isset($vapid['publicKey'])) {
@@ -97,15 +97,8 @@ class VAPID
      * @return array Returns an array with the 'Authorization' and 'Crypto-Key' values to be used as headers
      * @throws \ErrorException
      */
-    public static function getVapidHeaders(
-        string $audience,
-        string $subject,
-        string $publicKey,
-        #[\SensitiveParameter]
-        string $privateKey,
-        string $contentEncoding,
-        ?int $expiration = null,
-    ): array {
+    public static function getVapidHeaders(string $audience, string $subject, string $publicKey, string $privateKey, string $contentEncoding, ?int $expiration = null)
+    {
         $expirationLimit = time() + 43200; // equal margin of error between 0 and 24h
         if (null === $expiration || $expiration > $expirationLimit) {
             $expiration = $expirationLimit;
@@ -183,7 +176,7 @@ class VAPID
 
         return [
             'publicKey'  => Base64Url::encode($binaryPublicKey),
-            'privateKey' => Base64Url::encode($binaryPrivateKey),
+            'privateKey' => Base64Url::encode($binaryPrivateKey)
         ];
     }
 }

@@ -61,10 +61,6 @@ class JWSLoader
     /**
      * This method will try to load and verify the token using the given key set. It returns a JWS and will populate the
      * $signature variable in case of success, otherwise an exception is thrown.
-     *
-     * The failure semantics are unchanged, but the last error met along the way - a serialization failure, a rejected
-     * header or a key that could not verify the signature - is chained as the previous exception, so that the reason of
-     * the failure remains available to the caller.
      */
     public function loadAndVerifyWithKeySet(
         string $token,
@@ -72,50 +68,32 @@ class JWSLoader
         ?int &$signature,
         ?string $payload = null
     ): JWS {
-        $lastError = null;
         try {
             $jws = $this->serializerManager->unserialize($token);
             $nbSignatures = $jws->countSignatures();
             for ($i = 0; $i < $nbSignatures; ++$i) {
-                if ($this->processSignature($jws, $keyset, $i, $payload, $lastError)) {
+                if ($this->processSignature($jws, $keyset, $i, $payload)) {
                     $signature = $i;
 
                     return $jws;
                 }
             }
-        } catch (Throwable $throwable) {
-            $lastError = $throwable;
+        } catch (Throwable) {
+            // Nothing to do. Exception thrown just after
         }
 
-        throw new Exception('Unable to load and verify the token.', 0, $lastError);
+        throw new Exception('Unable to load and verify the token.');
     }
 
-    private function processSignature(
-        JWS $jws,
-        JWKSet $keyset,
-        int $signature,
-        ?string $payload,
-        ?Throwable &$lastError
-    ): bool {
+    private function processSignature(JWS $jws, JWKSet $keyset, int $signature, ?string $payload): bool
+    {
         try {
             if ($this->headerCheckerManager !== null) {
                 $this->headerCheckerManager->check($jws, $signature);
             }
-            $jwk = null;
 
-            return $this->jwsVerifier->verifyWithKeySet(
-                $jws,
-                $keyset,
-                $signature,
-                $payload,
-                $jwk,
-                static function (Throwable $throwable) use (&$lastError): void {
-                    $lastError = $throwable;
-                }
-            );
-        } catch (Throwable $throwable) {
-            $lastError = $throwable;
-
+            return $this->jwsVerifier->verifyWithKeySet($jws, $keyset, $signature, $payload);
+        } catch (Throwable) {
             return false;
         }
     }

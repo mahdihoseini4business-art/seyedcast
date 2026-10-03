@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Jose\Component\Core\Util\Ecc;
 
 use Brick\Math\BigInteger;
-use Override;
 use RuntimeException;
 use Stringable;
 use const STR_PAD_LEFT;
@@ -13,18 +12,17 @@ use const STR_PAD_LEFT;
 /**
  * @internal
  */
-final readonly class Curve implements Stringable
+final class Curve implements Stringable
 {
     public function __construct(
-        private int $size,
-        private BigInteger $prime,
-        private BigInteger $a,
-        private BigInteger $b,
-        private Point $generator
+        private readonly int $size,
+        private readonly BigInteger $prime,
+        private readonly BigInteger $a,
+        private readonly BigInteger $b,
+        private readonly Point $generator
     ) {
     }
 
-    #[Override]
     public function __toString(): string
     {
         return 'curve(' . Math::toString($this->getA()) . ', ' . Math::toString($this->getB()) . ', ' . Math::toString(
@@ -139,6 +137,7 @@ final readonly class Curve implements Stringable
             return Point::infinity();
         }
 
+        /** @var BigInteger $zero */
         $zero = BigInteger::zero();
         if ($one->getOrder()->compareTo($zero) > 0) {
             $n = $n->mod($one->getOrder());
@@ -156,10 +155,10 @@ final readonly class Curve implements Stringable
 
         for ($i = 0; $i < $k; ++$i) {
             $j = $n1[$i];
-            [$r[0], $r[1]] = Point::cswap($r[0], $r[1], $j ^ 1);
+            Point::cswap($r[0], $r[1], $j ^ 1);
             $r[0] = $this->add($r[0], $r[1]);
             $r[1] = $this->getDouble($r[1]);
-            [$r[0], $r[1]] = Point::cswap($r[0], $r[1], $j ^ 1);
+            Point::cswap($r[0], $r[1], $j ^ 1);
         }
 
         $this->validate($r[0]);
@@ -243,7 +242,7 @@ final readonly class Curve implements Stringable
     {
         $max = $this->generator->getOrder();
         $numBits = $this->bnNumBits($max);
-        $numBytes = max(1, intdiv($numBits + 7, 8));
+        $numBytes = (int) ceil($numBits / 8);
         // Generate an integer of size >= $numBits
         $bytes = BigInteger::randomBits($numBytes);
         $mask = BigInteger::of(2)->power($numBits)->minus(1);
@@ -255,8 +254,6 @@ final readonly class Curve implements Stringable
      * Returns the number of bits used to store this number. Non-significant upper bits are not counted.
      *
      * @see https://www.openssl.org/docs/crypto/BN_num_bytes.html
-     *
-     * @return int<0, max>
      */
     private function bnNumBits(BigInteger $x): int
     {

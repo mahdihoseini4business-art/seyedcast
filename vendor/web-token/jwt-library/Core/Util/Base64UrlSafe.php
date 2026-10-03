@@ -4,21 +4,6 @@ declare(strict_types=1);
 
 namespace Jose\Component\Core\Util;
 
-use InvalidArgumentException;
-use RangeException;
-use SensitiveParameter;
-use SodiumException;
-use function extension_loaded;
-use function pack;
-use function rtrim;
-use function sodium_base642bin;
-use function sodium_bin2base64;
-use function strlen;
-use function substr;
-use function unpack;
-use const SODIUM_BASE64_VARIANT_URLSAFE;
-use const SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING;
-
 /**
  *  Copyright (c) 2016 - 2022 Paragon Initiative Enterprises.
  *  Copyright (c) 2014 Steve "Sc00bz" Thomas (steve at tobtu dot com)
@@ -41,9 +26,17 @@ use const SODIUM_BASE64_VARIANT_URLSAFE_NO_PADDING;
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *  SOFTWARE.
  */
-final readonly class Base64UrlSafe
+
+use InvalidArgumentException;
+use RangeException;
+use SodiumException;
+
+/**
+ * @readonly
+ */
+final class Base64UrlSafe
 {
-    public static function encode(#[SensitiveParameter] string $binString): string
+    public static function encode(string $binString): string
     {
         if (extension_loaded('sodium')) {
             try {
@@ -55,7 +48,7 @@ final readonly class Base64UrlSafe
         return static::doEncode($binString, true);
     }
 
-    public static function encodeUnpadded(#[SensitiveParameter] string $src): string
+    public static function encodeUnpadded(string $src): string
     {
         if (extension_loaded('sodium')) {
             try {
@@ -67,7 +60,7 @@ final readonly class Base64UrlSafe
         return static::doEncode($src, false);
     }
 
-    public static function decode(#[SensitiveParameter] string $encodedString, bool $strictPadding = false): string
+    public static function decode(string $encodedString, bool $strictPadding = false): string
     {
         $srcLen = self::safeStrlen($encodedString);
         if ($srcLen === 0) {
@@ -116,9 +109,9 @@ final readonly class Base64UrlSafe
 
             $dest .= pack(
                 'CCC',
-                ((($c0 << 2) | ($c1 >> 4)) & 0xFF),
-                ((($c1 << 4) | ($c2 >> 2)) & 0xFF),
-                ((($c2 << 6) | $c3) & 0xFF)
+                ((($c0 << 2) | ($c1 >> 4)) & 0xff),
+                ((($c1 << 4) | ($c2 >> 2)) & 0xff),
+                ((($c2 << 6) | $c3) & 0xff)
             );
             $err |= ($c0 | $c1 | $c2 | $c3) >> 8;
         }
@@ -131,17 +124,17 @@ final readonly class Base64UrlSafe
             if ($i + 2 < $srcLen) {
                 $c1 = static::decode6Bits($chunk[2]);
                 $c2 = static::decode6Bits($chunk[3]);
-                $dest .= pack('CC', ((($c0 << 2) | ($c1 >> 4)) & 0xFF), ((($c1 << 4) | ($c2 >> 2)) & 0xFF));
+                $dest .= pack('CC', ((($c0 << 2) | ($c1 >> 4)) & 0xff), ((($c1 << 4) | ($c2 >> 2)) & 0xff));
                 $err |= ($c0 | $c1 | $c2) >> 8;
                 if ($strictPadding) {
-                    $err |= ($c2 << 6) & 0xFF;
+                    $err |= ($c2 << 6) & 0xff;
                 }
             } elseif ($i + 1 < $srcLen) {
                 $c1 = static::decode6Bits($chunk[2]);
-                $dest .= pack('C', ((($c0 << 2) | ($c1 >> 4)) & 0xFF));
+                $dest .= pack('C', ((($c0 << 2) | ($c1 >> 4)) & 0xff));
                 $err |= ($c0 | $c1) >> 8;
                 if ($strictPadding) {
-                    $err |= ($c1 << 4) & 0xFF;
+                    $err |= ($c1 << 4) & 0xff;
                 }
             } elseif ($strictPadding) {
                 $err |= 1;
@@ -154,7 +147,7 @@ final readonly class Base64UrlSafe
         return $dest;
     }
 
-    public static function decodeNoPadding(#[SensitiveParameter] string $encodedString): string
+    public static function decodeNoPadding(string $encodedString): string
     {
         $srcLen = self::safeStrlen($encodedString);
         if ($srcLen === 0) {
@@ -168,7 +161,7 @@ final readonly class Base64UrlSafe
         return static::decode($encodedString, true);
     }
 
-    private static function doEncode(#[SensitiveParameter] string $src, bool $pad = true): string
+    private static function doEncode(string $src, bool $pad = true): string
     {
         $dest = '';
         $srcLen = self::safeStrlen($src);
@@ -214,12 +207,12 @@ final readonly class Base64UrlSafe
     private static function decode6Bits(int $src): int
     {
         $ret = -1;
-        $ret += (((0x40 - $src) & ($src - 0x5B)) >> 8) & ($src - 64);
-        $ret += (((0x60 - $src) & ($src - 0x7B)) >> 8) & ($src - 70);
-        $ret += (((0x2F - $src) & ($src - 0x3A)) >> 8) & ($src + 5);
-        $ret += (((0x2C - $src) & ($src - 0x2E)) >> 8) & 63;
+        $ret += (((0x40 - $src) & ($src - 0x5b)) >> 8) & ($src - 64);
+        $ret += (((0x60 - $src) & ($src - 0x7b)) >> 8) & ($src - 70);
+        $ret += (((0x2f - $src) & ($src - 0x3a)) >> 8) & ($src + 5);
+        $ret += (((0x2c - $src) & ($src - 0x2e)) >> 8) & 63;
 
-        return $ret + ((((0x5E - $src) & ($src - 0x60)) >> 8) & 64);
+        return $ret + ((((0x5e - $src) & ($src - 0x60)) >> 8) & 64);
     }
 
     private static function encode6Bits(int $src): string
@@ -233,16 +226,16 @@ final readonly class Base64UrlSafe
         return pack('C', $src + $diff);
     }
 
-    private static function safeStrlen(#[SensitiveParameter] string $str): int
+    private static function safeStrlen(string $str): int
     {
-        return strlen($str);
+        return mb_strlen($str, '8bit');
     }
 
-    private static function safeSubstr(#[SensitiveParameter] string $str, int $start = 0, $length = null): string
+    private static function safeSubstr(string $str, int $start = 0, $length = null): string
     {
         if ($length === 0) {
             return '';
         }
-        return substr($str, $start, $length);
+        return mb_substr($str, $start, $length, '8bit');
     }
 }

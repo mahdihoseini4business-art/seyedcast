@@ -56,21 +56,24 @@ class Seyedcast_Pwa {
 	 * @param WP $wp WP request.
 	 */
 	public function maybe_serve_from_path( $wp ) {
-		if ( ! $this->enabled() ) {
-			return;
-		}
 		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
 		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
 		if ( '' === $path ) {
 			return;
 		}
 		if ( preg_match( '#/seyedcast-manifest\.webmanifest$#', $path ) ) {
-			$this->output_manifest();
-			exit;
+			if ( $this->enabled() ) {
+				$this->output_manifest();
+				exit;
+			}
+			return;
 		}
 		if ( preg_match( '#/seyedcast-sw\.js$#', $path ) ) {
-			$this->output_sw();
-			exit;
+			// SW is required for push even when install prompt/PWA chrome is off.
+			if ( $this->enabled() || $this->push_enabled() ) {
+				$this->output_sw();
+				exit;
+			}
 		}
 	}
 
@@ -79,11 +82,19 @@ class Seyedcast_Pwa {
 	 */
 	public function serve_endpoints() {
 		if ( get_query_var( 'seyedcast_manifest' ) ) {
-			$this->output_manifest();
+			if ( $this->enabled() ) {
+				$this->output_manifest();
+				exit;
+			}
+			status_header( 404 );
 			exit;
 		}
 		if ( get_query_var( 'seyedcast_sw' ) ) {
-			$this->output_sw();
+			if ( $this->enabled() || $this->push_enabled() ) {
+				$this->output_sw();
+				exit;
+			}
+			status_header( 404 );
 			exit;
 		}
 	}
@@ -96,6 +107,16 @@ class Seyedcast_Pwa {
 	private function enabled() {
 		$settings = Seyedcast_Settings::get();
 		return ! empty( $settings['pwa_enabled'] );
+	}
+
+	/**
+	 * Whether push notifications are enabled.
+	 *
+	 * @return bool
+	 */
+	private function push_enabled() {
+		$settings = Seyedcast_Settings::get();
+		return ! empty( $settings['push_enabled'] );
 	}
 
 	/**
@@ -354,7 +375,7 @@ class Seyedcast_Pwa {
 	 * Output service worker JS.
 	 */
 	private function output_sw() {
-		if ( ! $this->enabled() ) {
+		if ( ! $this->enabled() && ! $this->push_enabled() ) {
 			status_header( 404 );
 			return;
 		}

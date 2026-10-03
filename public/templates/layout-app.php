@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 	<?php wp_head(); ?>
 </head>
-<body <?php body_class( 'seyedcast-app-shell seyedcast-preset-' . $preset ); ?>>
+<body <?php body_class( 'seyedcast-app-shell' ); ?>>
 	<div class="seyedcast-shell" id="seyedcast-shell" dir="rtl">
 		<?php Seyedcast_Templates::partial( 'app-header' ); ?>
 

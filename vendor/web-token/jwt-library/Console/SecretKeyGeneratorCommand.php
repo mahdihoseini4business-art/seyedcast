@@ -6,7 +6,6 @@ namespace Jose\Component\Console;
 
 use InvalidArgumentException;
 use Jose\Component\KeyManagement\JWKFactory;
-use Override;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -17,11 +16,14 @@ use function is_string;
 
 #[AsCommand(
     name: 'key:generate:from_secret',
-    description: 'Generate an octet key (JWK format) using an existing secret'
+    description: 'Generate an octet key (JWK format) using an existing secret',
 )]
 final class SecretKeyGeneratorCommand extends GeneratorCommand
 {
-    #[Override]
+    protected static $defaultName = 'key:generate:from_secret';
+
+    protected static $defaultDescription = 'Generate an octet key (JWK format) using an existing secret';
+
     protected function configure(): void
     {
         parent::configure();
@@ -34,7 +36,6 @@ final class SecretKeyGeneratorCommand extends GeneratorCommand
             );
     }
 
-    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $secret = $input->getArgument('secret');

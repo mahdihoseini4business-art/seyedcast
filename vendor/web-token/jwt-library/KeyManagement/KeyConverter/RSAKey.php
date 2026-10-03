@@ -10,32 +10,22 @@ use Jose\Component\Core\Util\Base64UrlSafe;
 use Jose\Component\Core\Util\BigInteger;
 use RuntimeException;
 use function array_key_exists;
-use function assert;
 use function extension_loaded;
+use function in_array;
 use function is_array;
-use function is_string;
 
 /**
  * @internal
  */
 final class RSAKey
 {
-    /**
-     * @var array<array-key, string>
-     */
     private array $values = [];
 
-    /**
-     * @param array<array-key, string> $data
-     */
     private function __construct(array $data)
     {
         $this->loadJWK($data);
     }
 
-    /**
-     * @param array<array-key, mixed> $details
-     */
     public static function createFromKeyDetails(array $details): self
     {
         $values = [
@@ -52,10 +42,9 @@ final class RSAKey
             'qi' => 'iqmp',
         ];
         foreach ($details as $key => $value) {
-            $name = array_search($key, $keys, true);
-            if ($name !== false) {
-                assert(is_string($value), 'Invalid key.');
-                $values[$name] = Base64UrlSafe::encodeUnpadded($value);
+            if (in_array($key, $keys, true)) {
+                $value = Base64UrlSafe::encodeUnpadded($value);
+                $values[array_search($key, $keys, true)] = $value;
             }
         }
 
@@ -79,12 +68,8 @@ final class RSAKey
         if (! is_array($details) || ! isset($details['rsa'])) {
             throw new InvalidArgumentException('Unable to load the key.');
         }
-        $data = $details['rsa'];
-        if (! is_array($data)) {
-            throw new InvalidArgumentException('Unable to load the key.');
-        }
 
-        return self::createFromKeyDetails($data);
+        return self::createFromKeyDetails($details['rsa']);
     }
 
     public static function createFromJWK(JWK $jwk): self
@@ -110,9 +95,6 @@ final class RSAKey
         return new self($data);
     }
 
-    /**
-     * @return array<array-key, string>
-     */
     public function toArray(): array
     {
         return $this->values;
@@ -134,9 +116,6 @@ final class RSAKey
         }
     }
 
-    /**
-     * @param array<array-key, string> $jwk
-     */
     private function loadJWK(array $jwk): void
     {
         if (! array_key_exists('kty', $jwk)) {
@@ -240,7 +219,7 @@ final class RSAKey
             if ($y === null) {
                 throw new InvalidArgumentException('Unable to find prime factors.');
             }
-            if ($found) {
+            if ($found === true) {
                 $p = $y->subtract($one)
                     ->gcd($n);
                 $q = $n->divide($p);

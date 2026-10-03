@@ -9,29 +9,24 @@ use Jose\Component\Core\Util\Base64UrlSafe;
 use Jose\Component\Core\Util\JsonConverter;
 use Jose\Component\Signature\JWS;
 use LogicException;
-use Override;
 use Throwable;
 use function count;
 use function is_array;
-use function sprintf;
 
-final readonly class CompactSerializer extends Serializer
+final class CompactSerializer extends Serializer
 {
     public const NAME = 'jws_compact';
 
-    #[Override]
     public function displayName(): string
     {
         return 'JWS Compact';
     }
 
-    #[Override]
     public function name(): string
     {
         return self::NAME;
     }
 
-    #[Override]
     public function serialize(JWS $jws, ?int $signatureIndex = null): string
     {
         if ($signatureIndex === null) {
@@ -58,16 +53,9 @@ final readonly class CompactSerializer extends Serializer
         );
     }
 
-    /**
-     * The split is bounded to four segments: a valid compact JWS has exactly three, so a fourth one is enough to
-     * detect and reject any longer input. Without that bound, a delimiter-heavy string would be expanded into one
-     * array entry per delimiter before the segment count is checked, which costs about twenty-five times the size
-     * of the input in memory.
-     */
-    #[Override]
     public function unserialize(string $input): JWS
     {
-        $parts = explode('.', $input, 4);
+        $parts = explode('.', $input);
         if (count($parts) !== 3) {
             throw new InvalidArgumentException('Unsupported input');
         }

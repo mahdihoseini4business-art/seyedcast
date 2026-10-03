@@ -348,7 +348,7 @@ while ( count( $events ) < 3 ) {
 							<?php esc_html_e( 'با انتشار اپیزود جدید، برای مشترکان اعلان پوش ارسال شود', 'seyedcast' ); ?>
 						</label>
 						<p class="description">
-							<?php esc_html_e( 'نیاز به HTTPS و فعال بودن PWA دارد. در iOS فقط پس از افزودن به صفحه اصلی (نسخه ۱۶.۴+) کار می‌کند.', 'seyedcast' ); ?>
+							<?php esc_html_e( 'نیاز به HTTPS دارد. Service Worker برای پوش حتی بدون فعال بودن پیشنهاد نصب PWA سرو می‌شود. در iOS فقط پس از افزودن به صفحه اصلی (۱۶.۴+) کار می‌کند.', 'seyedcast' ); ?>
 						</p>
 						<?php if ( ! empty( $settings['pwa_prompt'] ) && ! empty( $settings['push_enabled'] ) ) : ?>
 							<p class="description" style="color:#996800;">
@@ -356,8 +356,21 @@ while ( count( $events ) < 3 ) {
 							</p>
 						<?php endif; ?>
 						<?php
-						$push_count   = class_exists( 'Seyedcast_Push', false ) ? Seyedcast_Push::subscriber_count() : 0;
-						$push_ready   = class_exists( 'Seyedcast_Push', false ) && Seyedcast_Push::library_ready();
+						$push_count  = 0;
+						$push_status = array(
+							'ready'   => false,
+							'library' => false,
+							'message' => __( 'کلاس پوش در دسترس نیست.', 'seyedcast' ),
+						);
+						if ( class_exists( 'Seyedcast_Push', false ) ) {
+							try {
+								$push_count  = Seyedcast_Push::subscriber_count();
+								$push_status = Seyedcast_Push::status_report();
+							} catch ( Throwable $e ) {
+								$push_status['message'] = __( 'بررسی وضعیت پوش با خطا متوقف شد. دکمه ذخیره همچنان کار می‌کند.', 'seyedcast' );
+							}
+						}
+						$push_ready = ! empty( $push_status['ready'] );
 						?>
 						<p>
 							<?php
@@ -370,7 +383,14 @@ while ( count( $events ) < 3 ) {
 						</p>
 						<?php if ( ! $push_ready ) : ?>
 							<p class="description" style="color:#b32d2e;">
-								<?php esc_html_e( 'کتابخانه web-push نصب نیست. در ریشه افزونه دستور composer install --no-dev را اجرا کنید.', 'seyedcast' ); ?>
+								<?php echo esc_html( ! empty( $push_status['message'] ) ? $push_status['message'] : __( 'پوش آماده نیست.', 'seyedcast' ) ); ?>
+								<?php if ( empty( $push_status['library'] ) ) : ?>
+									<br /><?php esc_html_e( 'اگر vendor روی سرور نیست، پوشه vendor را همراه افزونه آپلود کنید یا composer install --no-dev را اجرا کنید.', 'seyedcast' ); ?>
+								<?php endif; ?>
+							</p>
+						<?php else : ?>
+							<p class="description" style="color:#007017;">
+								<?php esc_html_e( 'سیستم پوش آماده است (کتابخانه، VAPID و جدول مشترکان).', 'seyedcast' ); ?>
 							</p>
 						<?php endif; ?>
 						<p>

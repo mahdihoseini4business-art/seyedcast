@@ -6,7 +6,6 @@ namespace Jose\Component\Signature;
 
 use InvalidArgumentException;
 use function array_key_exists;
-use function sprintf;
 
 class Signature
 {
@@ -18,8 +17,8 @@ class Signature
     private readonly array $protectedHeader;
 
     /**
-     * @param array<string, mixed> $protectedHeader
-     * @param array<string, mixed> $header
+     * @param array{alg?: string, string?: mixed} $protectedHeader
+     * @param array{alg?: string, string?: mixed} $header
      */
     public function __construct(
         private readonly string $signature,
